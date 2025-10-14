@@ -6,7 +6,7 @@ A Spring Boot 3.3 service skeleton targeting JDK 21 that manages beach metadata,
 
 * Docker & Docker Compose
 * JDK 21 (for local development outside containers)
-  * If JDK 21 is not already installed, the Gradle toolchain provisioning enabled in [`gradle.properties`](gradle.properties) automatically downloads a matching runtime the first time you run the build.
+
 * Gradle wrapper scripts (the bootstrap JAR downloads automatically on first run)
 
 ## Local Setup
