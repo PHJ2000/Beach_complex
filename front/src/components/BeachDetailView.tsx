@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { ThumbsUp, AlertTriangle, ZoomIn, ZoomOut, Heart } from 'lucide-react';
-import { Beach, beaches } from '../data/beaches';
+import type { Beach } from '../api/beaches';
+import { beaches as staticBeaches } from '../data/beaches';
 import { BottomNavigation } from './BottomNavigation';
 import { MonthlyHeatmap } from './MonthlyHeatmap';
 import { Calendar } from './ui/calendar';
@@ -21,7 +22,7 @@ interface BeachDetailViewProps {
   onNavigate?: (view: string) => void;
   onBeachChange?: (beach: Beach) => void;
   favoriteBeaches?: string[];
-  onFavoriteToggle?: (beachId: string) => void;
+  onFavoriteToggle?: (beachId: string | number) => void;
 }
 
 function WaveLogo() {
@@ -311,7 +312,7 @@ export function BeachDetailView({ beach, onClose, selectedDate, weatherTemp, onD
                   </div>
                   
                   {/* All beach markers */}
-                  {beaches.map((b) => {
+                  {staticBeaches.map((b) => {
                     const isSelected = b.id === beach.id;
                     const statusColors = {
                       busy: '#FF0000',
@@ -499,12 +500,12 @@ export function BeachDetailView({ beach, onClose, selectedDate, weatherTemp, onD
                     <button
                       onClick={() => onFavoriteToggle?.(beach.id)}
                       className="shrink-0 p-1 hover:bg-accent rounded-full transition-colors"
-                      aria-label={favoriteBeaches.includes(beach.id) ? "찜 해제" : "찜하기"}
+                      aria-label={favoriteBeaches.includes(String(beach.id)) ? "찜 해제" : "찜하기"}
                     >
-                      <Heart 
+                      <Heart
                         className={`w-4 h-4 transition-colors ${
-                          favoriteBeaches.includes(beach.id)
-                            ? 'fill-purple-600 stroke-purple-600' 
+                          favoriteBeaches.includes(String(beach.id))
+                            ? 'fill-purple-600 stroke-purple-600'
                             : 'fill-none stroke-gray-400 hover:stroke-purple-500'
                         }`}
                       />

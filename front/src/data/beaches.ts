@@ -1,15 +1,4 @@
-export interface Beach {
-  id: number;
-  name: string;
-  address: string;
-  distance: string;
-  status: 'busy' | 'normal' | 'free';
-  tags: string[];
-  mapPosition: {
-    x: number; // percentage from left (0-100)
-    y: number; // percentage from top (0-100)
-  };
-}
+import type { Beach } from '../api/beaches';
 
 export const beaches: Beach[] = [
   {
