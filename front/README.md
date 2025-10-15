@@ -5,7 +5,19 @@
 
   ## Running the code
 
-  Run `npm i` to install the dependencies.
+Run `npm i` to install the dependencies.
 
-  Run `npm run dev` to start the development server.
+Run `npm run dev` to start the development server.
+
+## Environment configuration
+
+Create a `.env` file in the `front` directory (or otherwise provide environment variables) with the following settings so the SPA can authenticate against the backend API:
+
+```
+VITE_API_BASE_URL=<http://localhost:8080>
+VITE_API_USER=<your-basic-auth-username>
+VITE_API_PASS=<your-basic-auth-password>
+```
+
+`VITE_API_BASE_URL` should point to the Beach backend instance, and the username/password pair must match the Basic Auth credentials expected by the server.
   

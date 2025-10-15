@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Search, Heart } from 'lucide-react';
 import svgPaths from "./imports/svg-aou00tt65r";
 import { BeachCard } from './components/BeachCard';
@@ -8,6 +8,7 @@ import { EventsView } from './components/EventsView';
 import { MyPageView } from './components/MyPageView';
 import { DeveloperModeView } from './components/DeveloperModeView';
 import { BottomNavigation } from './components/BottomNavigation';
+import { fetchBeaches, Beach } from './api/beaches';
 import { fetchBeaches } from './data/beaches';
 import { Beach } from './types/beach';
 import { Calendar } from './components/ui/calendar';
@@ -63,6 +64,11 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('search'); // Start with search tab active
   const [favoriteBeaches, setFavoriteBeaches] = useState<string[]>([]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [beaches, setBeaches] = useState<Beach[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const isDataReady = !isLoading && !error;
 
   // Load favorites from localStorage on mount
   useEffect(() => {
@@ -86,6 +92,25 @@ export default function App() {
     localStorage.setItem('beachcheck_favorites', JSON.stringify(favoriteBeaches));
   }, [favoriteBeaches]);
 
+  const loadBeaches = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const data = await fetchBeaches();
+      setBeaches(data);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
+      setError(message);
+      setBeaches([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadBeaches();
+  }, [loadBeaches]);
   useEffect(() => {
     const controller = new AbortController();
     setIsLoadingBeaches(true);
@@ -175,17 +200,35 @@ export default function App() {
     { id: 'free', label: '#여유로운 곳' },
   ];
 
-  const toggleFavorite = (beachId: string, e: React.MouseEvent) => {
+  const toggleFavorite = (beachId: string | number, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!isDataReady) {
+      return;
+    }
+
+    const beachIdStr = String(beachId);
     setFavoriteBeaches(prev => {
-      if (prev.includes(beachId)) {
-        return prev.filter(id => id !== beachId);
+      if (prev.includes(beachIdStr)) {
+        return prev.filter(id => id !== beachIdStr);
       } else {
-        return [...prev, beachId];
+        return [...prev, beachIdStr];
       }
     });
   };
 
+  const filteredBeaches = useMemo(() => {
+    if (!beaches.length) {
+      return [];
+    }
+
+    return beaches.filter((beach) => {
+      const matchesSearch = beach.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           beach.address.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesTag = !activeTag || beach.tags.includes(activeTag);
+      const matchesFavorite = !showFavoritesOnly || favoriteBeaches.includes(String(beach.id));
+      return matchesSearch && matchesTag && matchesFavorite;
+    });
+  }, [beaches, searchQuery, activeTag, showFavoritesOnly, favoriteBeaches]);
   const filteredBeaches = beaches.filter((beach) => {
     const query = searchQuery.trim().toLowerCase();
     const nameMatches = beach.name.toLowerCase().includes(query);
@@ -214,6 +257,7 @@ export default function App() {
     setActiveTab(tab);
     if (tab === 'home') {
       // Go to BeachDetailView (시작화면2) with last selected beach
+      const beachToSelect = lastSelectedBeach || beaches[0];
       const beachToSelect = lastSelectedBeach || beaches[0] || null;
       if (beachToSelect) {
         setSelectedBeach(beachToSelect);
@@ -320,11 +364,13 @@ export default function App() {
         }}
         favoriteBeaches={favoriteBeaches}
         onFavoriteToggle={(beachId) => {
+          if (!isDataReady) return;
+          const beachIdStr = String(beachId);
           setFavoriteBeaches(prev => {
-            if (prev.includes(beachId)) {
-              return prev.filter(id => id !== beachId);
+            if (prev.includes(beachIdStr)) {
+              return prev.filter(id => id !== beachIdStr);
             } else {
-              return [...prev, beachId];
+              return [...prev, beachIdStr];
             }
           });
         }}
@@ -418,6 +464,7 @@ export default function App() {
             placeholder="해수욕장 이름을 검색하세요"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            disabled={isLoading}
             className="flex-1 outline-none bg-transparent font-['Noto_Sans_KR:Regular',_sans-serif] text-[13px] text-foreground placeholder:text-muted-foreground"
           />
           <Search className="w-[18px] h-[18px] text-[#007DFC]" />
@@ -428,33 +475,36 @@ export default function App() {
           {/* Favorite Filter Button */}
           <button
             onClick={() => {
+              if (!isDataReady) return;
               setShowFavoritesOnly(!showFavoritesOnly);
               if (!showFavoritesOnly) {
                 setActiveTag(null); // Clear other filters when showing favorites
               }
             }}
+            disabled={!isDataReady}
             className={`shrink-0 flex items-center justify-center w-[36px] h-[36px] rounded-full transition-all border-2 ${
               showFavoritesOnly
                 ? 'bg-purple-600 border-purple-600'
                 : 'bg-card border-border hover:border-purple-300'
-            }`}
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
             aria-label="찜한 해수욕장"
           >
-            <Heart 
+            <Heart
               className={`w-4 h-4 ${
-                showFavoritesOnly 
-                  ? 'fill-white stroke-white' 
+                showFavoritesOnly
+                  ? 'fill-white stroke-white'
                   : 'fill-purple-600 stroke-purple-600'
               }`}
             />
           </button>
-          
+
           {hashtags.map((tag) => (
             <HashtagChip
               key={tag.id}
               label={tag.label}
               isActive={activeTag === tag.id}
               onClick={() => {
+                if (!isDataReady) return;
                 setActiveTag(activeTag === tag.id ? null : tag.id);
                 if (activeTag !== tag.id) {
                   setShowFavoritesOnly(false); // Clear favorites filter when selecting hashtag
@@ -483,13 +533,37 @@ export default function App() {
       )}
 
       <div className="divide-y divide-border">
-        {filteredBeaches.map((beach) => (
+        {isLoading && (
+          <div className="p-8 text-center">
+            <p className="font-['Noto_Sans_KR:Regular',_sans-serif] text-muted-foreground">데이터를 불러오는 중입니다...</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="p-8 text-center space-y-4">
+            <p className="font-['Noto_Sans_KR:Regular',_sans-serif] text-muted-foreground">{error}</p>
+            <button
+              onClick={loadBeaches}
+              className="inline-flex items-center justify-center rounded-md bg-[#007DFC] px-4 py-2 text-white hover:bg-[#0063c9] transition-colors"
+            >
+              다시 시도
+            </button>
+          </div>
+        )}
+
+        {isDataReady && filteredBeaches.map((beach) => (
           <BeachCard
             key={beach.id}
+            name={beach.name}
+            address={beach.address}
+            distance={beach.distance}
+            status={beach.status}
+            isFavorite={favoriteBeaches.includes(String(beach.id))}
             beach={beach}
             isFavorite={favoriteBeaches.includes(beach.id)}
             onFavoriteToggle={(e) => toggleFavorite(beach.id, e)}
             onClick={() => {
+              if (!isDataReady) return;
               setSelectedBeach(beach);
               setLastSelectedBeach(beach);
               setActiveTab('home'); // Set active tab to home when selecting a beach
@@ -498,6 +572,7 @@ export default function App() {
         ))}
       </div>
 
+      {isDataReady && filteredBeaches.length === 0 && (
       {!isLoadingBeaches && !beachError && filteredBeaches.length === 0 && (
         <div className="p-8 text-center">
           <p className="font-['Noto_Sans_KR:Regular',_sans-serif] text-muted-foreground">

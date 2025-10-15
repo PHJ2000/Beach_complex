@@ -1,3 +1,4 @@
+import type { Beach } from '../api/beaches';
 import { Beach, BeachStatus } from '../types/beach';
 
 const STATUS_MAP: Record<string, BeachStatus> = {
