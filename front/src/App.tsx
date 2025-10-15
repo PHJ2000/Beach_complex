@@ -8,7 +8,8 @@ import { EventsView } from './components/EventsView';
 import { MyPageView } from './components/MyPageView';
 import { DeveloperModeView } from './components/DeveloperModeView';
 import { BottomNavigation } from './components/BottomNavigation';
-import { beaches, Beach } from './data/beaches';
+import { fetchBeaches } from './data/beaches';
+import { Beach } from './types/beach';
 import { Calendar } from './components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from './components/ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './components/ui/dialog';
@@ -53,6 +54,9 @@ export default function App() {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [showWeather, setShowWeather] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [beaches, setBeaches] = useState<Beach[]>([]);
+  const [isLoadingBeaches, setIsLoadingBeaches] = useState(true);
+  const [beachError, setBeachError] = useState<string | null>(null);
   const [selectedBeach, setSelectedBeach] = useState<Beach | null>(null);
   const [lastSelectedBeach, setLastSelectedBeach] = useState<Beach | null>(null);
   const [currentView, setCurrentView] = useState<'main' | 'events' | 'mypage' | 'developer'>('main');
@@ -63,8 +67,17 @@ export default function App() {
   // Load favorites from localStorage on mount
   useEffect(() => {
     const savedFavorites = localStorage.getItem('beachcheck_favorites');
-    if (savedFavorites) {
-      setFavoriteBeaches(JSON.parse(savedFavorites));
+    if (!savedFavorites) {
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(savedFavorites);
+      if (Array.isArray(parsed)) {
+        setFavoriteBeaches(parsed.map((id: unknown) => String(id)));
+      }
+    } catch (error) {
+      console.warn('Failed to parse stored favorites', error);
     }
   }, []);
 
@@ -72,6 +85,37 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('beachcheck_favorites', JSON.stringify(favoriteBeaches));
   }, [favoriteBeaches]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setIsLoadingBeaches(true);
+    setBeachError(null);
+
+    fetchBeaches(controller.signal)
+      .then((data) => {
+        setBeaches(data);
+        if (data.length > 0) {
+          setLastSelectedBeach((previous) => previous ?? data[0] ?? null);
+        }
+      })
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return;
+        }
+
+        if (error && typeof error === 'object' && 'name' in error && (error as { name: string }).name === 'AbortError') {
+          return;
+        }
+
+        const message = error instanceof Error ? error.message : '해수욕장 정보를 불러오지 못했습니다.';
+        setBeachError(message);
+      })
+      .finally(() => {
+        setIsLoadingBeaches(false);
+      });
+
+    return () => controller.abort();
+  }, []);
 
   // Load and apply theme on mount
   useEffect(() => {
@@ -126,9 +170,9 @@ export default function App() {
   }, []);
 
   const hashtags = [
-    { id: 'trending', label: '#요즘 뜨는 해수욕장' },
-    { id: 'popular', label: '#사람들이 많이 가는 곳' },
-    { id: 'festival', label: '#축제하는 곳' },
+    { id: 'busy', label: '#혼잡한 곳' },
+    { id: 'normal', label: '#보통인 곳' },
+    { id: 'free', label: '#여유로운 곳' },
   ];
 
   const toggleFavorite = (beachId: string, e: React.MouseEvent) => {
@@ -143,9 +187,11 @@ export default function App() {
   };
 
   const filteredBeaches = beaches.filter((beach) => {
-    const matchesSearch = beach.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         beach.address.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesTag = !activeTag || beach.tags.includes(activeTag);
+    const query = searchQuery.trim().toLowerCase();
+    const nameMatches = beach.name.toLowerCase().includes(query);
+    const codeMatches = beach.code.toLowerCase().includes(query);
+    const matchesSearch = query.length === 0 || nameMatches || codeMatches;
+    const matchesTag = !activeTag || beach.status === activeTag;
     const matchesFavorite = !showFavoritesOnly || favoriteBeaches.includes(beach.id);
     return matchesSearch && matchesTag && matchesFavorite;
   });
@@ -168,9 +214,11 @@ export default function App() {
     setActiveTab(tab);
     if (tab === 'home') {
       // Go to BeachDetailView (시작화면2) with last selected beach
-      const beachToSelect = lastSelectedBeach || beaches[0];
-      setSelectedBeach(beachToSelect);
-      setLastSelectedBeach(beachToSelect);
+      const beachToSelect = lastSelectedBeach || beaches[0] || null;
+      if (beachToSelect) {
+        setSelectedBeach(beachToSelect);
+        setLastSelectedBeach(beachToSelect);
+      }
       setCurrentView('main');
     } else if (tab === 'search') {
       // Go to main search screen (시작화면1)
@@ -247,6 +295,7 @@ export default function App() {
     return (
       <BeachDetailView
         beach={selectedBeach}
+        beaches={beaches}
         onClose={() => {
           setSelectedBeach(null);
           setActiveTab('search'); // Set active tab to search when closing detail view
@@ -417,14 +466,27 @@ export default function App() {
       </div>
 
       {/* Beach List */}
+      {isLoadingBeaches && (
+        <div className="p-8 text-center">
+          <p className="font-['Noto_Sans_KR:Regular',_sans-serif] text-muted-foreground">
+            해수욕장 정보를 불러오는 중입니다...
+          </p>
+        </div>
+      )}
+
+      {!isLoadingBeaches && beachError && (
+        <div className="p-4 mx-4 my-4 text-center bg-red-100 text-red-600 rounded-lg border border-red-200">
+          <p className="font-['Noto_Sans_KR:Regular',_sans-serif] text-[13px]">
+            {beachError}
+          </p>
+        </div>
+      )}
+
       <div className="divide-y divide-border">
         {filteredBeaches.map((beach) => (
           <BeachCard
             key={beach.id}
-            name={beach.name}
-            address={beach.address}
-            distance={beach.distance}
-            status={beach.status}
+            beach={beach}
             isFavorite={favoriteBeaches.includes(beach.id)}
             onFavoriteToggle={(e) => toggleFavorite(beach.id, e)}
             onClick={() => {
@@ -436,7 +498,7 @@ export default function App() {
         ))}
       </div>
 
-      {filteredBeaches.length === 0 && (
+      {!isLoadingBeaches && !beachError && filteredBeaches.length === 0 && (
         <div className="p-8 text-center">
           <p className="font-['Noto_Sans_KR:Regular',_sans-serif] text-muted-foreground">
             검색 결과가 없습니다.

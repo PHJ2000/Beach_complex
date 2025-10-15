@@ -1,3 +1,6 @@
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { ThumbsUp, AlertTriangle, ZoomIn, ZoomOut, Heart } from 'lucide-react';
+import { Beach } from '../types/beach';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { ThumbsUp, AlertTriangle, ZoomIn, ZoomOut, Heart, Loader2 } from 'lucide-react';
 import { Beach, beaches } from '../data/beaches';
@@ -15,6 +18,7 @@ import { fetchRecentConditions, type BeachConditionDto } from '../api/conditions
 
 interface BeachDetailViewProps {
   beach: Beach;
+  beaches: Beach[];
   onClose: () => void;
   selectedDate: Date | undefined;
   weatherTemp: string;
@@ -24,6 +28,49 @@ interface BeachDetailViewProps {
   favoriteBeaches?: string[];
   onFavoriteToggle?: (beachId: string) => void;
 }
+
+const STATUS_COLORS: Record<Beach['status'], string> = {
+  busy: '#FF0000',
+  normal: '#FFEA00',
+  free: '#51FF00',
+  unknown: '#64748B',
+};
+
+const getStatusLabel = (status: Beach['status']) => {
+  switch (status) {
+    case 'busy':
+      return '혼잡';
+    case 'normal':
+      return '보통';
+    case 'free':
+      return '여유';
+    default:
+      return '정보 없음';
+  }
+};
+
+const formatCoordinates = (latitude: number, longitude: number) => {
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return '좌표 정보 없음';
+  }
+
+  return `${latitude.toFixed(3)}°, ${longitude.toFixed(3)}°`;
+};
+
+const formatUpdatedAt = (updatedAt: string) => {
+  if (!updatedAt) {
+    return '업데이트 정보 없음';
+  }
+
+  const parsed = new Date(updatedAt);
+  if (Number.isNaN(parsed.getTime())) {
+    return '업데이트 정보 없음';
+  }
+
+  return `업데이트: ${parsed.toLocaleString('ko-KR')}`;
+};
+
+const clamp = (value: number, min = 0, max = 100) => Math.min(max, Math.max(min, value));
 
 function WaveLogo() {
   return (
@@ -59,6 +106,7 @@ function CloudWeatherIcon() {
   );
 }
 
+export function BeachDetailView({ beach, beaches: allBeaches, onClose, selectedDate, weatherTemp, onDateChange, onNavigate, onBeachChange, favoriteBeaches = [], onFavoriteToggle }: BeachDetailViewProps) {
 type ConditionStatus = 'free' | 'normal' | 'busy';
 type ExtendedConditionStatus = ConditionStatus | 'unknown';
 
@@ -341,6 +389,57 @@ export function BeachDetailView({ beach, onClose, selectedDate, weatherTemp, onD
   };
 
   const currentHour = new Date().getHours();
+
+  const mapBounds = useMemo(() => {
+    const candidates = allBeaches.filter(
+      (item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude)
+    );
+
+    if (candidates.length === 0) {
+      return null;
+    }
+
+    const latitudes = candidates.map((item) => item.latitude);
+    const longitudes = candidates.map((item) => item.longitude);
+
+    return {
+      minLat: Math.min(...latitudes),
+      maxLat: Math.max(...latitudes),
+      minLon: Math.min(...longitudes),
+      maxLon: Math.max(...longitudes),
+    };
+  }, [allBeaches]);
+
+  const computeMarkerPosition = useCallback(
+    (target: Beach) => {
+      if (!mapBounds) {
+        return null;
+      }
+
+      if (!Number.isFinite(target.latitude) || !Number.isFinite(target.longitude)) {
+        return null;
+      }
+
+      const latRange = mapBounds.maxLat - mapBounds.minLat || 1;
+      const lonRange = mapBounds.maxLon - mapBounds.minLon || 1;
+
+      const x = ((target.longitude - mapBounds.minLon) / lonRange) * 100;
+      const y = ((mapBounds.maxLat - target.latitude) / latRange) * 100;
+
+      return {
+        x: clamp(x),
+        y: clamp(y),
+      };
+    },
+    [mapBounds]
+  );
+
+  const selectedMarkerPosition = useMemo(
+    () => computeMarkerPosition(beach) ?? { x: 50, y: 50 },
+    [computeMarkerPosition, beach]
+  );
+
+  const selectedStatusColor = STATUS_COLORS[beach.status] ?? STATUS_COLORS.unknown;
   const statusColors = STATUS_COLORS;
 
   const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
@@ -514,8 +613,8 @@ export function BeachDetailView({ beach, onClose, selectedDate, weatherTemp, onD
           initialScale={1.2}
           minScale={0.5}
           maxScale={3}
-          initialPositionX={-(beach.mapPosition.x - 50) * 5.76}
-          initialPositionY={-(beach.mapPosition.y - 35) * 7.2}
+          initialPositionX={-(selectedMarkerPosition.x - 50) * 5.76}
+          initialPositionY={-(selectedMarkerPosition.y - 35) * 7.2}
           wheel={{ step: 0.1 }}
           doubleClick={{ mode: 'zoomIn' }}
         >
@@ -537,16 +636,25 @@ export function BeachDetailView({ beach, onClose, selectedDate, weatherTemp, onD
                   </div>
                   
                   {/* All beach markers */}
-                  {beaches.map((b) => {
+                  {allBeaches.map((b) => {
                     const isSelected = b.id === beach.id;
+
+                    let markerPosition = computeMarkerPosition(b);
+                    if (!markerPosition) {
+                      if (!isSelected) {
+                        return null;
+                      }
+                      markerPosition = selectedMarkerPosition;
+                    }
+
                     
                     return (
-                      <div 
+                      <div
                         key={b.id}
                         className="absolute"
                         style={{
-                          left: `${b.mapPosition.x}%`,
-                          top: `${b.mapPosition.y}%`,
+                          left: `${markerPosition.x}%`,
+                          top: `${markerPosition.y}%`,
                           transform: 'translate(-50%, -100%)',
                         }}
                       >
@@ -608,6 +716,12 @@ export function BeachDetailView({ beach, onClose, selectedDate, weatherTemp, onD
                             <div className="relative w-[35px] h-[42px]">
                               <svg className="absolute inset-0 w-full h-full drop-shadow-md" fill="none" preserveAspectRatio="none" viewBox="0 0 29 34">
                                 <path 
+                                  clipRule="evenodd"
+                                  d={svgPaths.p1a91f00}
+                                  fill={STATUS_COLORS[b.status] ?? STATUS_COLORS.unknown}
+                                  fillRule="evenodd"
+                                  stroke="#ffffff"
+                                  strokeLinecap="round"
                                   clipRule="evenodd" 
                                   d={svgPaths.p1a91f00} 
                                   fill={STATUS_COLORS[b.status]}
@@ -711,6 +825,7 @@ export function BeachDetailView({ beach, onClose, selectedDate, weatherTemp, onD
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div
                   className="w-3 h-3 rounded-full shrink-0"
+                  style={{ backgroundColor: selectedStatusColor }}
                   style={{ backgroundColor: statusColors[displayStatus] }}
                 />
                 <div className="flex-1 min-w-0">
@@ -732,7 +847,10 @@ export function BeachDetailView({ beach, onClose, selectedDate, weatherTemp, onD
                     </button>
                   </div>
                   <p className="font-['Noto_Sans_KR:Regular',_sans-serif] text-[12px] text-muted-foreground">
-                    {beach.address} · {beach.distance}
+                    {beach.code || '코드 정보 없음'} · {formatCoordinates(beach.latitude, beach.longitude)}
+                  </p>
+                  <p className="font-['Noto_Sans_KR:Regular',_sans-serif] text-[11px] text-muted-foreground">
+                    {formatUpdatedAt(beach.updatedAt)}
                   </p>
                   {observedAtDisplay && (
                     <p className="font-['Noto_Sans_KR:Medium',_sans-serif] text-[11px] text-muted-foreground mt-1">
@@ -783,6 +901,12 @@ export function BeachDetailView({ beach, onClose, selectedDate, weatherTemp, onD
                   </p>
                 </div>
               </div>
+              <div className="text-right shrink-0 ml-2">
+                <p className="font-['Noto_Sans_KR:Bold',_sans-serif] text-[14px]"
+                   style={{
+                     color: selectedStatusColor
+                   }}>
+                  {getStatusLabel(beach.status)}
 
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-muted/60 dark:bg-gray-900/50 rounded-lg p-3 text-center">
@@ -910,6 +1034,63 @@ export function BeachDetailView({ beach, onClose, selectedDate, weatherTemp, onD
             </div>
 
             <div className="bg-card dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-border">
+              {/* Legend at top */}
+              <div className="flex items-center justify-center gap-6 mb-4 pb-4 border-b border-border">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-md" style={{ backgroundColor: STATUS_COLORS.free }} />
+                <span className="font-['Noto_Sans_KR:Medium',_sans-serif] text-[12px] text-foreground">여유 (0-40%)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-md" style={{ backgroundColor: STATUS_COLORS.normal }} />
+                <span className="font-['Noto_Sans_KR:Medium',_sans-serif] text-[12px] text-foreground">보통 (40-70%)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-md" style={{ backgroundColor: STATUS_COLORS.busy }} />
+                <span className="font-['Noto_Sans_KR:Medium',_sans-serif] text-[12px] text-foreground">혼잡 (70-100%)</span>
+              </div>
+            </div>
+
+              {/* Chart */}
+              <div className="relative">
+                <div className="flex items-end justify-between gap-[2px] h-[180px]">
+                  {hourlyData.map((data) => {
+                    const isCurrentHour = data.hour === currentHour;
+                    const barHeight = (data.percentage / 100) * 160;
+                    
+                    return (
+                      <div 
+                        key={data.hour} 
+                        className="flex flex-col items-center gap-2 flex-1 relative group"
+                      >
+                        {/* Hover tooltip */}
+                        <div className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                          <div className="bg-gray-900 text-white px-3 py-2 rounded-lg shadow-lg whitespace-nowrap">
+                            <p className="font-['Noto_Sans_KR:Bold',_sans-serif] text-[12px]">
+                              {data.hour}시
+                            </p>
+                            <p className="font-['Noto_Sans_KR:Medium',_sans-serif] text-[11px]">
+                              {getStatusLabel(data.status)} {data.percentage}%
+                            </p>
+                            <div 
+                              className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 bg-gray-900 rotate-45"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Bar */}
+                        <div
+                          className="w-full rounded-t-md transition-all duration-300 hover:opacity-80 relative"
+                          style={{
+                            backgroundColor: STATUS_COLORS[data.status] ?? STATUS_COLORS.unknown,
+                            height: `${barHeight}px`,
+                            minHeight: '8px',
+                            boxShadow: isCurrentHour ? '0 0 0 2px #007DFC' : 'none',
+                          }}
+                        >
+                          {isCurrentHour && (
+                            <div className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                              <div className="bg-blue-500 text-white px-2 py-1 rounded text-[10px] font-['Noto_Sans_KR:Bold',_sans-serif]">
+                                지금
               {isLoadingConditions && !hasHourlyObservations ? (
                 <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
                   <Loader2 className="w-4 h-4 animate-spin" />
