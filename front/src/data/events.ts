@@ -1,3 +1,6 @@
+// NOTE: This module provides mock data used solely for demo/preview experiences within the
+// EventsView. Replace with real API integration when backend endpoints become available.
+
 export interface Event {
   id: string;
   title: string;
