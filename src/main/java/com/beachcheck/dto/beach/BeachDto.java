@@ -1,4 +1,4 @@
-package com.beachcheck.dto;
+package com.beachcheck.dto.beach;
 
 import java.time.Instant;
 import java.util.UUID;

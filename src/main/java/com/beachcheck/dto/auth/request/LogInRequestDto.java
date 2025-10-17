@@ -1,6 +1,5 @@
-package com.beachcheck.dto;
+package com.beachcheck.dto.auth.request;
 
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 

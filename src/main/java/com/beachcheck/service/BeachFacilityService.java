@@ -1,7 +1,7 @@
 package com.beachcheck.service;
 
 import com.beachcheck.domain.BeachFacility;
-import com.beachcheck.dto.BeachFacilityDto;
+import com.beachcheck.dto.beach.BeachFacilityDto;
 import com.beachcheck.repository.BeachFacilityRepository;
 import com.beachcheck.util.GeometryUtils;
 import org.springframework.cache.annotation.Cacheable;
