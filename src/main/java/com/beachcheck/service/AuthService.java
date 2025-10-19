@@ -2,8 +2,6 @@ package com.beachcheck.service;
 
 import com.beachcheck.domain.RefreshToken;
 import com.beachcheck.domain.User;
-import com.beachcheck.dto.*;
-import com.beachcheck.dto.auth.request.ChangePasswordRequestDto;
 import com.beachcheck.dto.auth.request.LogInRequestDto;
 import com.beachcheck.dto.auth.request.SignUpRequestDto;
 import com.beachcheck.dto.auth.response.AuthResponseDto;
@@ -126,19 +124,4 @@ public class AuthService {
         return UserResponseDto.from(user);
     }
 
-    @Transactional
-    public void changePassword(UUID userId, ChangePasswordRequestDto request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
-
-        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
-            throw new BadCredentialsException("Current password is incorrect");
-        }
-
-        user.setPassword(passwordEncoder.encode(request.newPassword()));
-        userRepository.save(user);
-
-        // 모든 refresh token 무효화
-        refreshTokenRepository.revokeAllByUser(user);
-    }
 }

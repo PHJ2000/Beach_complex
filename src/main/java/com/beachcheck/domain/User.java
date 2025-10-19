@@ -5,6 +5,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.security.AuthProvider;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -45,6 +46,9 @@ public class User implements UserDetails {
 
     @Column(name = "timezone", columnDefinition = "VARCHAR")
     private String timezone;
+
+    @Enumerated(EnumType.STRING)
+    private AuthProvider authProvider; // Email, Google, Kakao
 
     @PrePersist
     public void onCreate() {
@@ -166,7 +170,19 @@ public class User implements UserDetails {
         this.timezone = timezone;
     }
 
+    public AuthProvider getAuthProvider() {
+        return authProvider;
+    }
+
+    public void setAuthProvider(AuthProvider authProvider) {
+        this.authProvider = authProvider;
+    }
+
     public enum Role {
         USER, ADMIN
+    }
+
+    public enum AuthProvider {
+        EMAIL, GOOGLE, KAKAO
     }
 }
