@@ -74,5 +74,5 @@ app:
   security:
     allowed-origins:
         # CORS 설정
-        "http://localhost:3000" # 프론트(기본설정)
-        "http://localhost:8080" # 백
+        - "http://localhost:3000" # 프론트(기본설정)
+        - "http://localhost:8080" # 백
