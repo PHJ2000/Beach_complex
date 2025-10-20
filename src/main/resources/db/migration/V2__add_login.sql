@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     last_login_at TIMESTAMP WITH TIME ZONE,
     timezone VARCHAR,
+    auth_provider VARCHAR(20),
     CONSTRAINT chk_role CHECK (role IN ('USER', 'ADMIN'))
     );
 
@@ -32,8 +33,8 @@ CREATE INDEX idx_refresh_tokens_expires ON refresh_tokens(expires_at);
 
 -- 기본 관리자 계정 추가 (비밀번호: Admin123!)
 -- 실제 운영 환경에서는 초기 설정 후 비밀번호를 반드시 변경해야 함
-INSERT INTO users (email, password, name, role) VALUES
+INSERT INTO users (email, password, name, role, auth_provider) VALUES
     ('admin@beachcomplex.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
-    'System Admin', 'ADMIN');
+    'System Admin', 'ADMIN', 'EMAIL');
 
 
