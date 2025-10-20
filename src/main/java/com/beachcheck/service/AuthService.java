@@ -50,6 +50,7 @@ public class AuthService {
         user.setName(request.name());
         user.setRole(User.Role.USER);
         user.setEnabled(true);
+        user.setAuthProvider(User.AuthProvider.EMAIL);
 
         User savedUser = userRepository.save(user);
         return UserResponseDto.from(savedUser);
