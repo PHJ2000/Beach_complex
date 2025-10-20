@@ -33,7 +33,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
                         .requestMatchers("/actuator/**", "/swagger-ui.html", "/swagger-ui/**", "/api/docs/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/auth/signup", "/api/auth/signin", "/api/auth/refresh").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/signup", "/api/auth/login", "/api/auth/refresh").permitAll()
                         // Admin only endpoints
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         // All other endpoints require authentication
