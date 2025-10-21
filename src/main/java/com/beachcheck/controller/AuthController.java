@@ -1,7 +1,6 @@
 package com.beachcheck.controller;
 
 import com.beachcheck.domain.User;
-import com.beachcheck.dto.*;
 import com.beachcheck.dto.auth.request.LogInRequestDto;
 import com.beachcheck.dto.auth.request.RefreshTokenRequestDto;
 import com.beachcheck.dto.auth.request.SignUpRequestDto;
@@ -36,13 +35,13 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponseDto> signIn(@Valid @RequestBody LogInRequestDto request) {
+    public ResponseEntity<AuthResponseDto> logIn(@Valid @RequestBody LogInRequestDto request) {
         AuthResponseDto response = authService.logIn(request);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Map<String, String>> signOut(@Valid @RequestBody RefreshTokenRequestDto request) {
+    public ResponseEntity<Map<String, String>> logOut(@Valid @RequestBody RefreshTokenRequestDto request) {
         authService.logOut(request.refreshToken());
         return ResponseEntity.ok(Map.of("message", "Successfully signed out"));
     }
