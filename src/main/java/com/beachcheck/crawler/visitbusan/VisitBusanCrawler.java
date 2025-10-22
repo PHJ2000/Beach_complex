@@ -4,15 +4,19 @@ import com.beachcheck.crawler.Crawler;
 import com.beachcheck.domain.FestivalItem;
 import com.beachcheck.util.HtmlExtractUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.jsoup.*;
+import org.jsoup.Connection;
+import org.jsoup.Jsoup;
 import org.jsoup.nodes.*;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+
+import static com.beachcheck.util.HtmlExtractUtils.*;
 
 @Slf4j
 @Component
@@ -30,7 +34,6 @@ public class VisitBusanCrawler implements Crawler {
                 .followRedirects(true)
                 .ignoreContentType(true);
     }
-
 
     private static String enc(String s) {
         return URLEncoder.encode(s, StandardCharsets.UTF_8);
@@ -51,41 +54,35 @@ public class VisitBusanCrawler implements Crawler {
 
             Document doc = baseConnect(url).get();
 
-            // ✅ 변경 부분: 상세 링크(a[href*='view.do']) 기준으로 선택
+            // 상세로 가는 링크를 기준으로 수집 (마크업 변경에 강함)
             Elements links = doc.select("a[href*='/schedule/view.do'][href*='dataSid=']");
-
             List<FestivalItem> results = new ArrayList<>();
+
             for (Element a : links) {
                 FestivalItem item = parseListAnchor(a);
                 if (item == null) continue;
 
-                try {
-                    item = enrich(item);
-                } catch (Exception e) {
-                    log.warn("enrich fail: {}", item.getLink(), e);
-                }
+                try { item = enrich(item); }
+                catch (Exception e) { log.warn("enrich fail: {}", item.getLink(), e); }
 
                 results.add(item);
                 Thread.sleep(150);
             }
             return results;
-
         } catch (Exception e) {
             log.error("fetch fail", e);
             return List.of();
         }
     }
 
-
-    // ✅ 새 메서드 추가
     private FestivalItem parseListAnchor(Element a) {
         try {
             String href = a.attr("abs:href");
 
-            // 제목 추출
-            String title = HtmlExtractUtils.firstNonBlank(
-                    HtmlExtractUtils.textOrNull(a.selectFirst(".tit, .title, .subject")),
-                    HtmlExtractUtils.textOrNull(a.selectFirst("strong, h3, h4"))
+            String title = firstNonBlank(
+                    textOrNull(a.selectFirst(".tit, .title, .subject")),
+                    textOrNull(a.selectFirst("strong, h3, h4")),
+                    a.ownText()
             );
             if (title == null || title.isBlank()) {
                 String raw = a.text();
@@ -93,7 +90,6 @@ public class VisitBusanCrawler implements Crawler {
                 title = raw;
             }
 
-            // 썸네일
             Element img = a.selectFirst("img");
             String thumb = null;
             if (img != null) {
@@ -101,10 +97,10 @@ public class VisitBusanCrawler implements Crawler {
             }
 
             return FestivalItem.builder()
-                    .title(title != null ? title : "")
-                    .thumbnail(thumb != null ? thumb : "")
-                    .description("")
-                    .link(href)
+                    .title(title != null ? title.trim() : "")
+                    .thumbnail(thumb != null ? thumb.trim() : "")
+                    .description("") // 상세에서 채움
+                    .link(href != null ? href.trim() : "")
                     .build();
 
         } catch (Exception e) {
@@ -113,31 +109,62 @@ public class VisitBusanCrawler implements Crawler {
         }
     }
 
-
     @Override
     public FestivalItem enrich(FestivalItem item) throws Exception {
+        if (item.getLink() == null || item.getLink().isBlank()) return item;
+
         Document detail = baseConnect(item.getLink()).get();
 
-        String period = HtmlExtractUtils.labelFollowingText(detail, "기간");
-        if (period == null) period = HtmlExtractUtils.findDateRange(detail.text());
-        if (period != null) {
-            String[] se = period.split("~|–|-");
-            if (se.length >= 1) item.setStart(HtmlExtractUtils.normalizeDate(se[0]));
-            if (se.length >= 2) item.setEnd(HtmlExtractUtils.normalizeDate(se[1]));
+        /* ---- 1) 기간(start,end) ---- */
+        String periodRaw = firstNonBlank(
+                HtmlExtractUtils.labelFollowingText(detail, "기간"),
+                HtmlExtractUtils.labelFollowingText(detail, "행사기간"),
+                selectFirstText(detail, ".period, .date, .event-date")
+        );
+
+        LocalDate[] se = HtmlExtractUtils.findDateRange(
+                firstNonBlank(periodRaw, detail.text())
+        );
+        if (se != null) {
+            item.setStart(se[0].toString());
+            item.setEnd(se[1].toString());
+        } else if (periodRaw != null) {
+            String one = HtmlExtractUtils.normalizeDateAny(periodRaw);
+            LocalDate s = HtmlExtractUtils.toLocal(one);
+            if (s != null) { item.setStart(s.toString()); item.setEnd(s.toString()); }
         }
 
-        String location = HtmlExtractUtils.firstNonBlank(
-                HtmlExtractUtils.labelFollowingText(detail, "장소"),
-                HtmlExtractUtils.labelFollowingText(detail, "위치"),
-                HtmlExtractUtils.extractLocationFallback(detail)
-        );
-        item.setLocation(location);
+        // 역전/누락 보정
+        if (item.getStart() != null && item.getEnd() == null) item.setEnd(item.getStart());
+        if (item.getEnd() != null && item.getStart() == null) item.setStart(item.getEnd());
+        if (item.getStart() != null && item.getEnd() != null) {
+            LocalDate s = HtmlExtractUtils.toLocal(item.getStart());
+            LocalDate e = HtmlExtractUtils.toLocal(item.getEnd());
+            if (s != null && e != null && e.isBefore(s)) {
+                item.setStart(e.toString());
+                item.setEnd(s.toString());
+            }
+        }
 
-        String desc = HtmlExtractUtils.firstNonBlank(
-                HtmlExtractUtils.textOrNull(detail.selectFirst(".bbs_view, .content, article"))
-        );
-        if (desc != null && desc.length() > 20)
-            item.setDescription(HtmlExtractUtils.trim(desc, 400));
+        /* ---- 2) 장소(location) ---- */
+        String loc = HtmlExtractUtils.extractLocationFallback(detail);
+        if (loc != null) item.setLocation(trim(loc, 120));
+        else if (item.getLocation() == null) item.setLocation("");
+
+        /* ---- 3) 설명(description) ---- */
+        String desc = HtmlExtractUtils.extractDescription(detail);
+        if (desc != null && desc.length() >= 10) {
+            item.setDescription(desc);
+        } else if (item.getDescription() == null || item.getDescription().isBlank()) {
+            // 제목과 중복되지 않는 본문 일부라도
+            String fallback = selectFirstText(detail, "article, .content, .cont, .bbs_view, .view_con");
+            if (fallback != null) {
+                fallback = fallback.replace(item.getTitle(), "").trim();
+                item.setDescription(trim(fallback, 400));
+            } else {
+                item.setDescription("");
+            }
+        }
 
         return item;
     }
