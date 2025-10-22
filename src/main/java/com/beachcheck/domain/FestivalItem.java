@@ -7,10 +7,9 @@ import lombok.*;
 @Builder
 public class FestivalItem {
     private String title;
-    private String start;
-    private String end;
-    private String location;
+    private String start;       // YYYY-MM-DD
+    private String end;         // YYYY-MM-DD
+    private String location;    // 주소만
     private String thumbnail;
-    private String description;
     private String link;
 }
