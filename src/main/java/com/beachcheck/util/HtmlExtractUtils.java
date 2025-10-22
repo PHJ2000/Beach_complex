@@ -224,4 +224,101 @@ public class HtmlExtractUtils {
         // 아무것도 못 찾으면 null
         return null;
     }
+
+    // === 아래 메서드들을 HtmlExtractUtils 클래스의 맨 아래 쯤에 추가 ===
+
+    /** 페이지 하단 기준으로 특정 라벨(들)에 해당하는 값의 '마지막' 항목을 찾아 반환 */
+    public static String findLastLabeledValue(Document doc, String... labels) {
+        List<String> hits = new ArrayList<>();
+
+        // 1) table th/td
+        for (Element row : doc.select("table tr")) {
+            String th = textOrNull(row.selectFirst("th"));
+            String td = textOrNull(row.selectFirst("td"));
+            if (th == null || td == null) continue;
+            for (String label : labels) {
+                if (th.replace(" ", "").contains(label)) {
+                    hits.add(td);
+                }
+            }
+        }
+
+        // 2) dl dt/dd
+        for (Element dl : doc.select("dl")) {
+            Elements dts = dl.select("dt");
+            Elements dds = dl.select("dd");
+            for (int i = 0; i < Math.min(dts.size(), dds.size()); i++) {
+                String dt = textOrNull(dts.get(i));
+                String dd = textOrNull(dds.get(i));
+                if (dt == null || dd == null) continue;
+                for (String label : labels) {
+                    if (dt.replace(" ", "").contains(label)) {
+                        hits.add(dd);
+                    }
+                }
+            }
+        }
+
+        // 3) 일반 라벨(굵은 글씨/제목 등) + 바로 다음 형제
+        for (Element el : doc.select("h1,h2,h3,h4,h5,h6,strong,b,span,p,th")) {
+            String t = textOrNull(el);
+            if (t == null) continue;
+            t = t.replace(" ", "");
+            for (String label : labels) {
+                if (t.contains(label)) {
+                    Element sib = el.nextElementSibling();
+                    if (sib != null) {
+                        String candidate = sib.text();
+                        if (candidate != null && !candidate.isBlank()) hits.add(candidate.trim());
+                    }
+                }
+            }
+        }
+
+        // 4) 텍스트 기반(“라벨: 값”)
+        String plain = doc.text();
+        for (String label : labels) {
+            var m = java.util.regex.Pattern
+                    .compile(label + "\\s*[:：]\\s*([^\\n\\r]+)")
+                    .matcher(plain);
+            while (m.find()) {
+                hits.add(m.group(1).trim());
+            }
+        }
+
+        // 마지막 값 반환
+        if (!hits.isEmpty()) return hits.get(hits.size() - 1);
+        return null;
+    }
+
+    /** "YYYY.MM.DD ~ YYYY.MM.DD", "YYYY년 M월 D일 ~ ..." 등에서 (start,end) 반환. 단일이면 start=end */
+    public static java.time.LocalDate[] parseDateRangeOrSingle(String rawOrFallbackText) {
+        if (rawOrFallbackText == null || rawOrFallbackText.isBlank()) return null;
+
+        // 우선 범위 패턴 시도
+        java.time.LocalDate[] range = findDateRange(rawOrFallbackText);
+        if (range != null) return range;
+
+        // "YYYY년 M월 D일 ~ YYYY년 M월 D일" 같은 경우 findDateRange에서 잡히지만
+        // 못 잡는 케이스를 위해 ~ 기준 split後 각각 normalize
+        String[] byTilde = rawOrFallbackText.split("~|–|-");
+        if (byTilde.length >= 2) {
+            String a = normalizeDateAny(byTilde[0]);
+            String b = normalizeDateAny(byTilde[1]);
+            var sa = toLocal(a);
+            var sb = toLocal(b);
+            if (sa != null && sb != null) {
+                if (sb.isBefore(sa)) { var t = sa; sa = sb; sb = t; }
+                return new java.time.LocalDate[]{sa, sb};
+            }
+        }
+
+        // 단일 날짜 시도
+        String one = normalizeDateAny(rawOrFallbackText);
+        var s = toLocal(one);
+        if (s != null) return new java.time.LocalDate[]{s, s};
+
+        return null;
+    }
+
 }
