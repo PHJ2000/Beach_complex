@@ -24,9 +24,13 @@ public class VisitBusanCrawler implements Crawler {
         return Jsoup.connect(url)
                 .userAgent("Mozilla/5.0 (compatible; BeachCrawler/1.0)")
                 .timeout(10000)
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
                 .header("Accept-Language", "ko,en;q=0.8")
+                .referrer("https://www.visitbusan.net/")
+                .followRedirects(true)
                 .ignoreContentType(true);
     }
+
 
     private static String enc(String s) {
         return URLEncoder.encode(s, StandardCharsets.UTF_8);
@@ -46,45 +50,69 @@ public class VisitBusanCrawler implements Crawler {
             String url = BASE + "?" + query;
 
             Document doc = baseConnect(url).get();
-            Elements items = doc.select("ul.board_list li, .bbsList li");
-            List<FestivalItem> result = new ArrayList<>();
 
-            for (Element li : items) {
-                FestivalItem item = parseListItem(li);
+            // ✅ 변경 부분: 상세 링크(a[href*='view.do']) 기준으로 선택
+            Elements links = doc.select("a[href*='/schedule/view.do'][href*='dataSid=']");
+
+            List<FestivalItem> results = new ArrayList<>();
+            for (Element a : links) {
+                FestivalItem item = parseListAnchor(a);
                 if (item == null) continue;
-                try { item = enrich(item); } catch (Exception e) { log.warn("enrich fail: {}", item.getLink(), e); }
-                result.add(item);
+
+                try {
+                    item = enrich(item);
+                } catch (Exception e) {
+                    log.warn("enrich fail: {}", item.getLink(), e);
+                }
+
+                results.add(item);
                 Thread.sleep(150);
             }
-            return result;
+            return results;
+
         } catch (Exception e) {
             log.error("fetch fail", e);
             return List.of();
         }
     }
 
-    private FestivalItem parseListItem(Element li) {
+
+    // ✅ 새 메서드 추가
+    private FestivalItem parseListAnchor(Element a) {
         try {
-            Element a = li.selectFirst("a[href]");
-            if (a == null) return null;
             String href = a.attr("abs:href");
-            String title = HtmlExtractUtils.textOrNull(li.selectFirst(".tit, .title, .subject"));
 
-            Element img = li.selectFirst("img");
-            String thumb = img != null ? img.attr("abs:src") : null;
+            // 제목 추출
+            String title = HtmlExtractUtils.firstNonBlank(
+                    HtmlExtractUtils.textOrNull(a.selectFirst(".tit, .title, .subject")),
+                    HtmlExtractUtils.textOrNull(a.selectFirst("strong, h3, h4"))
+            );
+            if (title == null || title.isBlank()) {
+                String raw = a.text();
+                raw = raw.replaceAll("\\d{4}[./-]\\d{1,2}[./-]\\d{1,2}.*$", "").trim();
+                title = raw;
+            }
 
-            String summary = HtmlExtractUtils.textOrNull(li.selectFirst(".txt, .desc"));
+            // 썸네일
+            Element img = a.selectFirst("img");
+            String thumb = null;
+            if (img != null) {
+                thumb = img.hasAttr("data-src") ? img.attr("abs:data-src") : img.attr("abs:src");
+            }
+
             return FestivalItem.builder()
-                    .title(title)
-                    .thumbnail(thumb)
-                    .description(summary)
+                    .title(title != null ? title : "")
+                    .thumbnail(thumb != null ? thumb : "")
+                    .description("")
                     .link(href)
                     .build();
+
         } catch (Exception e) {
-            log.debug("parseListItem skip", e);
+            log.debug("parseListAnchor skip", e);
             return null;
         }
     }
+
 
     @Override
     public FestivalItem enrich(FestivalItem item) throws Exception {
