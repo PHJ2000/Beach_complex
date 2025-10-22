@@ -115,57 +115,36 @@ public class VisitBusanCrawler implements Crawler {
 
         Document detail = baseConnect(item.getLink()).get();
 
-        /* ---- 1) 기간(start,end) ---- */
-        String periodRaw = firstNonBlank(
-                HtmlExtractUtils.labelFollowingText(detail, "기간"),
-                HtmlExtractUtils.labelFollowingText(detail, "행사기간"),
-                selectFirstText(detail, ".period, .date, .event-date")
+        // 1) 일자(페이지 하단, 첨부 바로 위 블록의 마지막 '일자' 기준)
+        String periodRaw = HtmlExtractUtils.findLastLabeledValue(
+                detail,
+                "일자", "행사일자", "기간", "행사기간"
         );
 
-        LocalDate[] se = HtmlExtractUtils.findDateRange(
-                firstNonBlank(periodRaw, detail.text())
+        java.time.LocalDate[] se = HtmlExtractUtils.parseDateRangeOrSingle(
+                HtmlExtractUtils.firstNonBlank(periodRaw, detail.text())
         );
+
         if (se != null) {
             item.setStart(se[0].toString());
             item.setEnd(se[1].toString());
-        } else if (periodRaw != null) {
-            String one = HtmlExtractUtils.normalizeDateAny(periodRaw);
-            LocalDate s = HtmlExtractUtils.toLocal(one);
-            if (s != null) { item.setStart(s.toString()); item.setEnd(s.toString()); }
+        } else {
+            // 일자 라벨만 신뢰하기로 했으므로, 못 찾으면 비워둔다
+            item.setStart(null);
+            item.setEnd(null);
         }
 
-        // 역전/누락 보정
-        if (item.getStart() != null && item.getEnd() == null) item.setEnd(item.getStart());
-        if (item.getEnd() != null && item.getStart() == null) item.setStart(item.getEnd());
-        if (item.getStart() != null && item.getEnd() != null) {
-            LocalDate s = HtmlExtractUtils.toLocal(item.getStart());
-            LocalDate e = HtmlExtractUtils.toLocal(item.getEnd());
-            if (s != null && e != null && e.isBefore(s)) {
-                item.setStart(e.toString());
-                item.setEnd(s.toString());
-            }
-        }
+        // 2) 주소(페이지 하단의 마지막 '주소' 기준)
+        String addr = HtmlExtractUtils.findLastLabeledValue(
+                detail,
+                "주소"  // 주소만 사용
+        );
+        item.setLocation(addr != null ? HtmlExtractUtils.trim(addr, 200) : "");
 
-        /* ---- 2) 장소(location) ---- */
-        String loc = HtmlExtractUtils.extractLocationFallback(detail);
-        if (loc != null) item.setLocation(trim(loc, 120));
-        else if (item.getLocation() == null) item.setLocation("");
-
-        /* ---- 3) 설명(description) ---- */
-        String desc = HtmlExtractUtils.extractDescription(detail);
-        if (desc != null && desc.length() >= 10) {
-            item.setDescription(desc);
-        } else if (item.getDescription() == null || item.getDescription().isBlank()) {
-            // 제목과 중복되지 않는 본문 일부라도
-            String fallback = selectFirstText(detail, "article, .content, .cont, .bbs_view, .view_con");
-            if (fallback != null) {
-                fallback = fallback.replace(item.getTitle(), "").trim();
-                item.setDescription(trim(fallback, 400));
-            } else {
-                item.setDescription("");
-            }
-        }
+        // 3) 설명은 사용하지 않음 (항상 빈 문자열)
+        item.setDescription("");
 
         return item;
     }
+
 }
