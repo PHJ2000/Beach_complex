@@ -193,39 +193,37 @@ public class HtmlExtractUtils {
         return null;
     }
 
-    /* -------------------- 설명 파싱 -------------------- */
-
-    /** 설명은 메타 > 본문 첫문단 > 긴 본문 순으로 시도 */
-    public static String extractDescription(Document detail) {
-        String meta = firstNonBlank(
-                meta(detail, "property", "og:description"),
-                meta(detail, "name", "description")
-        );
-        if (meta != null && meta.strip().length() >= 10) return trim(meta, 400);
-
-        // 본문 첫 문단/요약 영역
-        String p = firstNonBlank(
-                selectFirstText(detail, ".summary, .intro, .lead, .bbs_view p, .view_con p, article p"),
-                selectFirstText(detail, ".content p, .cont p")
-        );
-        if (p != null && p.strip().length() >= 10) return trim(p, 400);
-
-        // 본문 전체 중 가장 긴 문단
-        Elements paras = detail.select("article p, .content p, .cont p, .bbs_view p, .view_con p");
-        String longest = null;
-        for (Element para : paras) {
-            String t = textOrNull(para);
-            if (t != null && t.length() >= 40) {
-                if (longest == null || t.length() > longest.length()) longest = t;
-            }
-        }
-        if (longest != null) return trim(longest, 400);
-
-        // 아무것도 못 찾으면 null
-        return null;
-    }
-
-    // === 아래 메서드들을 HtmlExtractUtils 클래스의 맨 아래 쯤에 추가 ===
+//    /* -------------------- 설명 파싱 -------------------- */
+//
+//    /** 설명은 메타 > 본문 첫문단 > 긴 본문 순으로 시도 */
+//    public static String extractDescription(Document detail) {
+//        String meta = firstNonBlank(
+//                meta(detail, "property", "og:description"),
+//                meta(detail, "name", "description")
+//        );
+//        if (meta != null && meta.strip().length() >= 10) return trim(meta, 400);
+//
+//        // 본문 첫 문단/요약 영역
+//        String p = firstNonBlank(
+//                selectFirstText(detail, ".summary, .intro, .lead, .bbs_view p, .view_con p, article p"),
+//                selectFirstText(detail, ".content p, .cont p")
+//        );
+//        if (p != null && p.strip().length() >= 10) return trim(p, 400);
+//
+//        // 본문 전체 중 가장 긴 문단
+//        Elements paras = detail.select("article p, .content p, .cont p, .bbs_view p, .view_con p");
+//        String longest = null;
+//        for (Element para : paras) {
+//            String t = textOrNull(para);
+//            if (t != null && t.length() >= 40) {
+//                if (longest == null || t.length() > longest.length()) longest = t;
+//            }
+//        }
+//        if (longest != null) return trim(longest, 400);
+//
+//        // 아무것도 못 찾으면 null
+//        return null;
+//    }
 
     /** 페이지 하단 기준으로 특정 라벨(들)에 해당하는 값의 '마지막' 항목을 찾아 반환 */
     public static String findLastLabeledValue(Document doc, String... labels) {
