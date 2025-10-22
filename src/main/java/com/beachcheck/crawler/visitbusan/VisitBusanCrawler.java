@@ -155,24 +155,31 @@ public class VisitBusanCrawler implements Crawler {
             }
         }
 
-        /* ========== 2) 위치(location): 1️⃣ 장소 → 2️⃣ 주소 → 3️⃣ 본문 ========== */
-        // 1️⃣ 하단 블록의 "장소/위치/행사장소"
+        /* === 2) 위치 === */
+// 1️⃣ 하단 블록의 "장소/위치/행사장소"
         String loc1 = HtmlExtractUtils.extractLabelShort(bottom, "장소", "위치", "행사장소");
-        if (loc1 == null) loc1 = HtmlExtractUtils.getByStructure(detail, "장소", "위치", "행사장소");
+        if (loc1 == null) loc1 = HtmlExtractUtils.getByStructure(detail, "장소","위치","행사장소");
 
-        // 2️⃣ 하단 블록의 "주소"
+// 2️⃣ 하단 블록의 "주소"
         String loc2 = HtmlExtractUtils.extractLabelShort(bottom, "주소");
         if (loc2 == null) loc2 = HtmlExtractUtils.getByStructure(detail, "주소");
 
-        // 3️⃣ 본문 전체에서 "장소: ..." 패턴
+// 3️⃣ 본문 전체에서 "장소: ..." 패턴
         String loc3 = null;
         var m = java.util.regex.Pattern
-                .compile("(장소|위치|행사장소)\\s*[:：]\\s*([\\p{IsHangul}A-Za-z0-9·\\-(),&/\\s]+)")
+                .compile("(장소|위치|행사장소)\\s*[:：]\\s*([\\p{IsHangul}A-Za-z0-9·\\-()&,/\\s]+)")
                 .matcher(detail.text());
         if (m.find()) loc3 = m.group(2).trim();
 
-        // 우선순위 적용
+// ✅ 각 후보 정리
+        loc1 = HtmlExtractUtils.normalizeLocation(loc1);
+        loc2 = HtmlExtractUtils.normalizeLocation(loc2);
+        loc3 = HtmlExtractUtils.normalizeLocation(loc3);
+
+// 우선순위 적용
         String location = HtmlExtractUtils.firstNonBlank(loc1, loc2, loc3);
+        item.setLocation(location == null ? "" : location);
+
 
         // 후처리: 잡음 컷 + 장소 끝말 기준 자르기
         if (location != null) {

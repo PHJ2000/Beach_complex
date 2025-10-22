@@ -157,39 +157,44 @@ public class HtmlExtractUtils {
 
     /* ================= 라벨 값 짧게 추출 ================= */
 
+    // 기존 extractLabelShort 전체를 아래 구현으로 교체
     public static String extractLabelShort(String text, String... labels) {
         if (text == null) return null;
 
+        // 다음 라벨/섹션 경계 (여기서만 자른다)
         String boundary = String.join("|", new String[]{
                 "일자","행사일자","기간","행사기간","장소","위치","주소",
-                "홈페이지","첨부파일","찾아오시는\\s*길","Top","관광","문의",
-                "주최","프로그램","일정","티켓","관람","러닝타임","공연"
+                "홈페이지","첨부파일","찾아오시는\\s*길",
+                "Top","관광","문의","주최","프로그램","일정","티켓","관람","러닝타임","공연"
         });
 
         for (String label : labels) {
-            String regex = "(?i)(?:^|\\b)" + label + "\\s*[:：]?\\s*([\\p{IsHangul}A-Za-z0-9·\\-(),&/\\s]+?)(?=(\\b(" + boundary + ")\\b|$))";
-            var m = Pattern.compile(regex).matcher(text);
+            // 콜론 유무 상관없이, 다음 라벨 나오기 전까지만 비탐욕으로 캡처
+            String regex = "(?i)(?:^|\\b)" + label + "\\s*[:：]?\\s*([\\p{IsHangul}A-Za-z0-9·\\-()&,/\\s]+?)(?=(\\b(" + boundary + ")\\b|$))";
+            var m = java.util.regex.Pattern.compile(regex).matcher(text);
             String hit = null;
-            while (m.find()) hit = m.group(1);
+            while (m.find()) hit = m.group(1); // 마지막(하단) 값 선호
 
             if (hit != null) {
                 hit = hit.replace('\u00A0', ' ').replaceAll("\\s+", " ").trim();
+                // 앞쪽 불릿/구분자 제거
                 hit = hit.replaceAll("^(?:[:：ㅇ□•\\-|,\\s]+)", "").trim();
+                // 뒤쪽에 다른 섹션 단어가 섞이면 컷
                 hit = hit.replaceAll("(홈페이지|첨부파일|찾아오시는 길|일자|기간|주최|문의|프로그램|티켓|관람|러닝타임).*", "").trim();
+                // ' - ' 같은 뒤 설명 컷
                 hit = hit.replaceAll("\\s[-–]\\s.*$", "").replaceAll("\\s[ㅇ□•]\\s.*$", "").trim();
 
-                var cut = Pattern.compile(
-                        "^(.*?(일원|광장|공원|거리|극장|스퀘어|센터|전당|타운|랜드|홀|운동장|해변|마을|공터|해수욕장|플라자|야외무대|정원|캠퍼스|로|길|청|장|원|베이|항|포구|사거리|사잇길|공구길|카페거리|문화회관|야외극장|상상의\\s*숲))(?:\\s|,|$)"
-                ).matcher(hit);
-                if (cut.find()) hit = cut.group(1).trim();
-
+                // ❗ 숫자(연도)로 시작하면 오검출로 간주
                 if (hit.matches("^\\d{4}[.\\-].*")) return null;
                 if (hit.length() < 2) return null;
+
+                // 더 이상의 '장소 단어에서 자르기'는 하지 않는다 (예: 부산시민공원 하야리아 잔디광장 보존)
                 return hit;
             }
         }
         return null;
     }
+
 
     /* ================= 기간 전용 추출 ================= */
 
@@ -251,4 +256,25 @@ public class HtmlExtractUtils {
         }
         return null;
     }
+
+    /** location 최종 정리: 공백 정돈, 잘못된 값 필터링, 흔한 접미 잡음 제거 */
+    public static String normalizeLocation(String raw) {
+        if (raw == null) return null;
+        String s = raw.replace('\u00A0', ' ').replaceAll("\\s+", " ").trim();
+
+        // 숫자(연도)로 시작하거나, 의미 없는 극단적으로 짧은 값은 무효
+        if (s.matches("^\\d{4}[.\\-].*")) return null;
+        if (s.length() < 2) return null;
+
+        // 라벨/섹션 단어가 뒤에 붙어 들어왔으면 잘라냄
+        s = s.replaceAll("(홈페이지|첨부파일|찾아오시는 길|일자|기간|주최|문의|프로그램|티켓|관람|러닝타임).*", "").trim();
+        // 불릿으로 이어지는 추가 설명 제거
+        s = s.replaceAll("\\s[-–]\\s.*$", "").replaceAll("\\s[ㅇ□•]\\s.*$", "").trim();
+
+        // 쉼표/일원 케이스: 과도한 꼬리 공백 정리
+        s = s.replaceAll("\\s*,\\s*", ", ").replaceAll("\\s+일원$", " 일원");
+
+        return s.isBlank() ? null : s;
+    }
+
 }
