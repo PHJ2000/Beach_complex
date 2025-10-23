@@ -6,7 +6,18 @@ A Spring Boot 3.3 service skeleton targeting JDK 21 that manages beach metadata,
 
 * Docker & Docker Compose
 * JDK 21 (for local development outside containers)
+
 * Gradle wrapper scripts (the bootstrap JAR downloads automatically on first run)
+
+## Quickstart
+
+To spin up both the backend and the web client locally:
+
+1. Install Node.js 18+ (for the frontend) and ensure Docker, Docker Compose, and JDK 21 are available as noted below.
+2. In one terminal, start the Spring Boot stack with Docker Compose as described in [Local Setup](#local-setup).
+3. In another terminal, change into [`front/`](front/) and run `npm install` followed by `npm run dev` to launch the Vite development server on port 5173.
+
+The following sections provide additional detail for each layer.
 
 ## Local Setup
 
