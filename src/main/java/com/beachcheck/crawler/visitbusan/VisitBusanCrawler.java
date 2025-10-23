@@ -171,20 +171,14 @@ public class VisitBusanCrawler implements Crawler {
                 .matcher(detail.text());
         if (m.find()) loc3 = m.group(2).trim();
 
-// 4️⃣ '찾아오시는 길' 섹션 기반 (하단 블록/문서 전체 텍스트 모두 시도)
-        String loc4 = HtmlExtractUtils.extractFromFindTheWay(bottom);
-        if (loc4 == null) loc4 = HtmlExtractUtils.extractFromFindTheWay(detail.text());
-
 // ✅ 각 후보 정리
         loc1 = HtmlExtractUtils.normalizeLocation(loc1);
         loc2 = HtmlExtractUtils.normalizeLocation(loc2);
         loc3 = HtmlExtractUtils.normalizeLocation(loc3);
-        loc4 = HtmlExtractUtils.normalizeLocation(loc4);
 
 // 우선순위 적용
-        String location = HtmlExtractUtils.firstNonBlank(loc1, loc2, loc3, loc4);
+        String location = HtmlExtractUtils.firstNonBlank(loc1, loc2, loc3);
         item.setLocation(location == null ? "" : location);
-
 
 
         // 후처리: 잡음 컷 + 장소 끝말 기준 자르기

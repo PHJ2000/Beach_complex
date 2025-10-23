@@ -157,9 +157,11 @@ public class HtmlExtractUtils {
 
     /* ================= 라벨 값 짧게 추출 ================= */
 
+    // 기존 extractLabelShort 전체를 아래 구현으로 교체
     public static String extractLabelShort(String text, String... labels) {
         if (text == null) return null;
 
+        // 다음 라벨/섹션 경계 (여기서만 자른다)
         String boundary = String.join("|", new String[]{
                 "일자","행사일자","기간","행사기간","장소","위치","주소",
                 "홈페이지","첨부파일","찾아오시는\\s*길",
@@ -167,30 +169,31 @@ public class HtmlExtractUtils {
         });
 
         for (String label : labels) {
+            // 콜론 유무 상관없이, 다음 라벨 나오기 전까지만 비탐욕으로 캡처
             String regex = "(?i)(?:^|\\b)" + label + "\\s*[:：]?\\s*([\\p{IsHangul}A-Za-z0-9·\\-()&,/\\s]+?)(?=(\\b(" + boundary + ")\\b|$))";
             var m = java.util.regex.Pattern.compile(regex).matcher(text);
             String hit = null;
-            while (m.find()) hit = m.group(1); // 마지막(하단) 매치 선호
+            while (m.find()) hit = m.group(1); // 마지막(하단) 값 선호
 
             if (hit != null) {
                 hit = hit.replace('\u00A0', ' ').replaceAll("\\s+", " ").trim();
-                // 앞/뒤 잡음 제거
+                // 앞쪽 불릿/구분자 제거
                 hit = hit.replaceAll("^(?:[:：ㅇ□•\\-|,\\s]+)", "").trim();
+                // 뒤쪽에 다른 섹션 단어가 섞이면 컷
                 hit = hit.replaceAll("(홈페이지|첨부파일|찾아오시는 길|일자|기간|주최|문의|프로그램|티켓|관람|러닝타임).*", "").trim();
+                // ' - ' 같은 뒤 설명 컷
                 hit = hit.replaceAll("\\s[-–]\\s.*$", "").replaceAll("\\s[ㅇ□•]\\s.*$", "").trim();
 
-                // 숫자(연도)로 시작하거나, 4자리 숫자만인 경우 오검출로 무효화
-                if (hit.matches("^\\d{4}([.\\-].*)?$") || hit.matches("^\\d+$")) return null;
-
-                // 너무 짧거나 의미 없는 값 배제
+                // ❗ 숫자(연도)로 시작하면 오검출로 간주
+                if (hit.matches("^\\d{4}[.\\-].*")) return null;
                 if (hit.length() < 2) return null;
 
+                // 더 이상의 '장소 단어에서 자르기'는 하지 않는다 (예: 부산시민공원 하야리아 잔디광장 보존)
                 return hit;
             }
         }
         return null;
     }
-
 
 
     /* ================= 기간 전용 추출 ================= */
@@ -255,46 +258,23 @@ public class HtmlExtractUtils {
     }
 
     /** location 최종 정리: 공백 정돈, 잘못된 값 필터링, 흔한 접미 잡음 제거 */
-    // 클래스 내부 임의의 아래쪽 위치에 추가 (이미 있었다면 아래 내용으로 교체)
     public static String normalizeLocation(String raw) {
         if (raw == null) return null;
-        String s = raw.replace('\u00A0', " ").replaceAll("\\s+", " ").trim();
+        String s = raw.replace('\u00A0', ' ').replaceAll("\\s+", " ").trim();
 
-        // 숫자만/연도만은 무효
-        if (s.matches("^\\d{4}([.\\-].*)?$") || s.matches("^\\d+$")) return null;
+        // 숫자(연도)로 시작하거나, 의미 없는 극단적으로 짧은 값은 무효
+        if (s.matches("^\\d{4}[.\\-].*")) return null;
+        if (s.length() < 2) return null;
 
-        // 섹션/라벨 단어가 섞였으면 거기서 컷
+        // 라벨/섹션 단어가 뒤에 붙어 들어왔으면 잘라냄
         s = s.replaceAll("(홈페이지|첨부파일|찾아오시는 길|일자|기간|주최|문의|프로그램|티켓|관람|러닝타임).*", "").trim();
-        // 불릿/대시 이후 설명 컷
+        // 불릿으로 이어지는 추가 설명 제거
         s = s.replaceAll("\\s[-–]\\s.*$", "").replaceAll("\\s[ㅇ□•]\\s.*$", "").trim();
 
-        // 쉼표/일원 공백 정리
+        // 쉼표/일원 케이스: 과도한 꼬리 공백 정리
         s = s.replaceAll("\\s*,\\s*", ", ").replaceAll("\\s+일원$", " 일원");
 
         return s.isBlank() ? null : s;
-    }
-
-    // 클래스 내부 임의의 아래쪽 위치에 추가
-    public static String extractFromFindTheWay(String bottomOrDocText) {
-        if (bottomOrDocText == null) return null;
-        String t = bottomOrDocText.replace('\u00A0', ' ').replaceAll("\\s+", " ").trim();
-        // 1) "찾아오시는 길:" 다음 ~ 경계 전까지
-        var m1 = java.util.regex.Pattern
-                .compile("찾아오시는\\s*길\\s*[:：]?\\s*([^|\\n\\r]+?)(?=(일자|기간|홈페이지|첨부파일|주최|문의|프로그램|$))")
-                .matcher(t);
-        if (m1.find()) {
-            String v = m1.group(1).trim();
-            // 안에 장소 단어가 있으면 그 부분만 보존 (없으면 전체 반환)
-            var placeCut = java.util.regex.Pattern
-                    .compile("(.*?(일원|광장|공원|거리|극장|스퀘어|센터|전당|타운|랜드|홀|운동장|해변|마을|공터|해수욕장|플라자|야외무대|정원|캠퍼스|로|길|청|장|원|베이|항|포구|사거리|사잇길|공구길|카페거리|문화회관|야외극장))")
-                    .matcher(v);
-            if (placeCut.find()) v = placeCut.group(1).trim();
-            return normalizeLocation(v);
-        }
-        // 2) "주소:" 패턴이 포함돼 있으면 주소만 가져오기
-        var m2 = java.util.regex.Pattern.compile("주소\\s*[:：]\\s*([^|\\n\\r]+)").matcher(t);
-        if (m2.find()) return normalizeLocation(m2.group(1).trim());
-        return null;
     }
 
 }
