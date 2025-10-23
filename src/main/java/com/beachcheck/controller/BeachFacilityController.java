@@ -1,6 +1,6 @@
 package com.beachcheck.controller;
 
-import com.beachcheck.dto.BeachFacilityDto;
+import com.beachcheck.dto.beach.BeachFacilityDto;
 import com.beachcheck.service.BeachFacilityService;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.http.ResponseEntity;

@@ -66,3 +66,13 @@ app:
   telemetry:
     lookback-hours: 24
   # TODO: Externalize telemetry endpoints to configuration server when available.
+
+  jwt:
+    secret: ${JWT_SECRET:your-256-bit-secret-key-here-change-in-production}
+    access-token-expiration: 3600000  # 1시간 (밀리초)
+    refresh-token-expiration: 2592000000  # 30일 (밀리초)
+  security:
+    allowed-origins:
+        # CORS 설정
+        - "http://localhost:3000" # 프론트(기본설정)
+        - "http://localhost:8080" # 백

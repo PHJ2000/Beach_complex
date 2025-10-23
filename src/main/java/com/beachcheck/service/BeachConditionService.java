@@ -1,7 +1,7 @@
 package com.beachcheck.service;
 
 import com.beachcheck.domain.BeachCondition;
-import com.beachcheck.dto.BeachConditionDto;
+import com.beachcheck.dto.beach.BeachConditionDto;
 import com.beachcheck.repository.BeachConditionRepository;
 import com.beachcheck.util.GeometryUtils;
 import org.springframework.cache.annotation.Cacheable;

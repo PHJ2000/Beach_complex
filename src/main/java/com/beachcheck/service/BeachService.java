@@ -1,7 +1,7 @@
 package com.beachcheck.service;
 
 import com.beachcheck.domain.Beach;
-import com.beachcheck.dto.BeachDto;
+import com.beachcheck.dto.beach.BeachDto;
 import com.beachcheck.repository.BeachRepository;
 import com.beachcheck.util.GeometryUtils;
 import jakarta.persistence.EntityNotFoundException;
