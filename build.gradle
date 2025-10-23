@@ -36,6 +36,10 @@ dependencies {
     implementation 'org.flywaydb:flyway-database-postgresql'
     implementation 'org.hibernate.orm:hibernate-spatial:6.5.2.Final'
     implementation 'org.locationtech.jts:jts-core:1.19.0'
+    implementation 'org.jsoup:jsoup:1.17.2'       // HTML 파싱용
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
 
     runtimeOnly 'org.postgresql:postgresql'
 
