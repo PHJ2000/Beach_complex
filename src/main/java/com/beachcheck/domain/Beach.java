@@ -33,6 +33,11 @@ public class Beach {
     @Column(nullable = false, length = 32)
     private String status;
 
+    @Column(name = "is_favorite", nullable = false)
+    private Boolean favorite = false;
+    public boolean isFavorite() { return favorite; }
+    public void setFavorite(boolean favorite) { this.favorite = favorite; }
+
     @JdbcTypeCode(SqlTypes.GEOMETRY)
     @Column(columnDefinition = "geometry(Point, 4326)", nullable = false)
     private Point location;
@@ -46,6 +51,12 @@ public class Beach {
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    @Column(name = "tag", columnDefinition = "text")
+    private String tag;
+
+    public String getTag() { return tag; }
+    public void setTag(String tag) { this.tag = tag; }
 
     @PrePersist
     public void onCreate() {
