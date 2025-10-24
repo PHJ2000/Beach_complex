@@ -66,5 +66,9 @@
     server: {
       port: 3000,
       open: true,
+       proxy: {
+      '/api': { target: 'http://localhost:8080', changeOrigin: true },
+      '/actuator': { target: 'http://localhost:8080', changeOrigin: true }, // 필요하면 유지
     },
-  });
+  },
+});
