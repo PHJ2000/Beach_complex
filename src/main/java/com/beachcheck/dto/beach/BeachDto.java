@@ -1,15 +1,16 @@
 package com.beachcheck.dto.beach;
 
-import java.time.Instant;
-import java.util.UUID;
+import lombok.Builder;
+import lombok.Getter;
 
-public record BeachDto(
-        UUID id,
-        String code,
-        String name,
-        String status,
-        double latitude,
-        double longitude,
-        Instant updatedAt
-) {
+@Builder
+@Getter
+public class BeachDto {
+    private Long id;
+    private String name;
+    private String district;
+    private double lat;
+    private double lon;
+    private String status;
+    private boolean favorite;
 }
