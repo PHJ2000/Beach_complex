@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
@@ -25,19 +24,8 @@ public class BeachController {
     }
 
     @GetMapping
-    public ResponseEntity<List<BeachDto>> findAll(
-            @RequestParam(required = false) String q,
-            @RequestParam(required = false) String tag
-    ) {
-        boolean hasQ = (q != null && !q.isBlank());
-        boolean hasTag = (tag != null && !tag.isBlank());
-
-        if (!hasQ && !hasTag) {
-            // ✅ 캐시 타는 기본 목록
-            return ResponseEntity.ok(beachService.findAll());
-        }
-        // ✅ 검색/필터
-        return ResponseEntity.ok(beachService.search(q, tag));
+    public ResponseEntity<List<BeachDto>> findAll() {
+        return ResponseEntity.ok(beachService.findAll());
     }
 
     @GetMapping("/{code}")

@@ -9,10 +9,3 @@
 
   Run `npm run dev` to start the development server.
   
-
-  ## 로컬 테스트 시 참고 사항
- 해당 명령어를 사용 후 진행하세요
- docker compose exec postgres psql -U beach -d beach_complex -c \
- "UPDATE beaches SET status='normal' WHERE code='HAEUNDAE';
- UPDATE beaches SET status='free'   WHERE code='SONGJEONG';
- UPDATE beaches SET status='busy'   WHERE code='GWANGALLI';"

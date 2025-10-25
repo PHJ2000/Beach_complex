@@ -4,8 +4,6 @@ const STATUS_MAP: Record<string, BeachStatus> = {
   busy: 'busy',
   normal: 'normal',
   free: 'free',
-  open: 'normal',      // ★ 백엔드의 OPEN → normal 로 매핑
-  closed: 'unknown',   // 필요시 다른 값으로
 };
 
 const toStatus = (value: unknown): BeachStatus => {
@@ -69,9 +67,6 @@ export const fetchBeaches = async (signal?: AbortSignal): Promise<Beach[]> => {
     latitude: toNumber(item.latitude),
     longitude: toNumber(item.longitude),
     updatedAt: toISOString(item.updatedAt),
-
-    tag: typeof item.tag === 'string' ? item.tag : null,
-    isFavorite: Boolean(item.isFavorite),
   }));
 };
 export interface Beach {
