@@ -32,6 +32,13 @@ const getStatusLabel = (status: Beach['status']) => {
     default: return '정보 없음';
   }
 };
+// 코드별 거리(m) — 네가 원하는 값으로 바꿔
+const HARDCODE_DISTANCE_M: Record<string, number> = {
+  HAEUNDAE: 2300,   // 2.3 km
+  GWANGALLI: 5400,  // 5.4 km
+  SONGJEONG: 8400,  // 8.4 km
+};
+
 
 const formatCoordinates = (latitude: number, longitude: number) => {
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return '좌표 정보 없음';
@@ -48,9 +55,9 @@ const HARDCODE_UPDATED_AT_BY_CODE: Record<string, string> = {
 
 /* ---------------- 주소 폴백 (BE에 address 없을 때 임시) -------------- */
 const ADDRESS_FALLBACK: Record<string, string> = {
-  HAEUNDAE:  '부산 해운대구 우동',
-  GWANGALLI: '부산 수영구 광안해변로',
-  SONGJEONG: '부산 해운대구 송정해변로',
+  HAEUNDAE:  '부산광역시 해운대구 해운대해변로 264',
+  GWANGALLI: '부산광역시 수영구 광안해변로 219',
+  SONGJEONG: '부산광역시 해운대구 송정해변로 62',
 };
 /* ------------------------------------------------------------------- */
 
@@ -122,7 +129,13 @@ export function BeachCard({
   addressOverride, distanceM, userCoords,
 }: BeachCardProps) {
   const statusColor = statusColors[beach.status] ?? statusColors.unknown;
-
+  const displayDistanceM =
+  (typeof distanceM === 'number' ? distanceM : null) ??
+  (userCoords
+    ? haversineMeters(userCoords.lat, userCoords.lng, beach.latitude, beach.longitude)
+    : null) ??
+  HARDCODE_DISTANCE_M[beach.code] ??
+  null;
   // 업데이트 시각: 하드코딩 우선 → 없으면 API 필드 사용
   const displayUpdatedRaw =
     HARDCODE_UPDATED_AT_BY_CODE[beach.code] ?? (beach as any).updatedAt;
@@ -158,7 +171,7 @@ export function BeachCard({
 
           {/* 주소 · 거리 or 좌표 */}
           <p className="font-['Noto_Sans_KR:Regular',_sans-serif] text-[12px] text-muted-foreground truncate">
-            {addressText} · {computedDistance != null ? formatDistance(computedDistance) : formatCoordinates(beach.latitude, beach.longitude)}
+            {addressText}{displayDistanceM != null ? ` · ${formatDistance(displayDistanceM)}` : ''}
           </p>
 
           {/* 업데이트 시각 */}
