@@ -94,8 +94,6 @@ export default function App() {
     fetchBeaches(controller.signal)
       .then((data) => {
         setBeaches(data);
-        const serverFavIds = data.filter(b => b.isFavorite).map(b => b.id);
-        setFavoriteBeaches(prev => Array.from(new Set([...prev, ...serverFavIds])));
         if (data.length > 0) {
           setLastSelectedBeach((previous) => previous ?? data[0] ?? null);
         }

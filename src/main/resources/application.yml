@@ -11,7 +11,6 @@ spring:
       ddl-auto: none
     properties:
       hibernate:
-        default_schema: public
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
     show-sql: false
@@ -53,9 +52,7 @@ management:
 logging:
   level:
     org.springframework.security: INFO
-    org.hibernate.SQL: DEBUG
-    org.hibernate.orm.jdbc.bind: TRACE
-    com.beachcheck: DEBUG
+    org.hibernate.SQL: WARN
 
 springdoc:
   api-docs:
@@ -69,10 +66,7 @@ app:
   telemetry:
     lookback-hours: 24
   # TODO: Externalize telemetry endpoints to configuration server when available.
-  environment:
-    SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/beach_complex
-    SPRING_DATASOURCE_USERNAME: beach
-    SPRING_DATASOURCE_PASSWORD: beach
+
   jwt:
     secret: ${JWT_SECRET:your-256-bit-secret-key-here-change-in-production}
     access-token-expiration: 3600000  # 1시간 (밀리초)
