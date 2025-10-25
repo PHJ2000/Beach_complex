@@ -7,5 +7,8 @@ export interface Beach {
   status: BeachStatus;
   latitude: number;
   longitude: number;
-  updatedAt: string;
+  updatedAt: string | number;
+
+  tag?: string | null;
+  isFavorite?: boolean;
 }
