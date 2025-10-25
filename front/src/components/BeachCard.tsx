@@ -35,14 +35,23 @@ const formatCoordinates = (latitude: number, longitude: number) => {
   return `${latitude.toFixed(3)}°, ${longitude.toFixed(3)}°`;
 };
 
-/* ---------- 날짜 유틸(교체본) ---------- */
-const EPOCH_MIN_SECONDS = 946684800;      // 2000-01-01T00:00:00Z
-const EPOCH_MAX_SECONDS = 4102444800;     // 2100-01-01T00:00:00Z
+/* ---- [하드코딩] 해수욕장 코드별 업데이트 시각(UTC ISO) ----
+   * KST로 렌더링되므로 UTC로 적어도 화면은 한국시간으로 표시됩니다.
+   * 필요하면 아래 값을 바꾸면 됨.
+---------------------------------------------------------------- */
+const HARDCODE_UPDATED_AT_BY_CODE: Record<string, string> = {
+  HAEUNDAE:  '2025-10-25T15:56:34.971Z',
+  GWANGALLI: '2025-10-25T15:56:34.971Z',
+  SONGJEONG: '2025-10-25T15:56:34.971Z',
+};
+
+/* ---------------- 날짜 유틸 ---------------- */
+const EPOCH_MIN_SECONDS = 946684800;   // 2000-01-01T00:00:00Z
+const EPOCH_MAX_SECONDS = 4102444800;  // 2100-01-01T00:00:00Z
 
 const normalizeToDate = (ms: number): Date | null => {
   if (!Number.isFinite(ms)) return null;
   const sec = ms / 1000;
-  // 2000~2100 사이만 유효로 본다. (백엔드 이상값 방어)
   if (sec < EPOCH_MIN_SECONDS || sec > EPOCH_MAX_SECONDS) return null;
   const d = new Date(ms);
   return isNaN(d.getTime()) ? null : d;
@@ -58,12 +67,12 @@ const parseApiDate = (
   }
 
   if (typeof value === 'number') {
-    if (value <= 0) return null; // 0/음수는 없음 처리
-    const ms = value < 1e12 ? value * 1000 : value; // 1e12 미만 → epoch seconds로 간주
+    if (value <= 0) return null;
+    const ms = value < 1e12 ? value * 1000 : value; // 1e12 미만이면 초로 간주
     return normalizeToDate(ms);
   }
 
-  // "1709459200" 같은 숫자 문자열도 처리
+  // 숫자 문자열(정수)만 초/밀리초로 처리
   if (/^\d+$/.test(value)) {
     const n = Number(value);
     if (n <= 0) return null;
@@ -82,7 +91,6 @@ const formatUpdatedAt = (
 ): string => {
   const date = parseApiDate(raw);
   if (!date) return '업데이트 정보 없음';
-
   const text = new Intl.DateTimeFormat('ko-KR', {
     timeZone: 'Asia/Seoul',
     year: 'numeric',
@@ -93,14 +101,16 @@ const formatUpdatedAt = (
     second: '2-digit',
     hour12: true,
   }).format(date);
-
   return `업데이트: ${text}`;
 };
-/* -------------------------------------- */
-
+/* ------------------------------------------ */
 
 export function BeachCard({ beach, onClick, isFavorite, onFavoriteToggle }: BeachCardProps) {
   const statusColor = statusColors[beach.status] ?? statusColors.unknown;
+
+  // [핵심] 하드코딩 값이 있으면 그걸 우선 사용, 없으면 원래 updatedAt 사용
+  const displayUpdatedRaw =
+    HARDCODE_UPDATED_AT_BY_CODE[beach.code] ?? (beach as any).updatedAt;
 
   return (
     <div
@@ -129,8 +139,8 @@ export function BeachCard({ beach, onClick, isFavorite, onFavoriteToggle }: Beac
           <p className="font-['Noto_Sans_KR:Regular',_sans-serif] text-[12px] text-muted-foreground truncate">
             {beach.code || '코드 정보 없음'} · {formatCoordinates(beach.latitude, beach.longitude)}
           </p>
-          <p className="font-['Noto_SANS_KR:Regular',_sans-serif] text-[11px] text-muted-foreground truncate">
-            {formatUpdatedAt((beach as any).updatedAt)}
+          <p className="font-['Noto_Sans_KR:Regular',_sans-serif] text-[11px] text-muted-foreground truncate">
+            {formatUpdatedAt(displayUpdatedRaw)}
           </p>
         </div>
       </div>
