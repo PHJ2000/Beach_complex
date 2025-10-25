@@ -60,6 +60,30 @@ function CloudWeatherIcon() {
   );
 }
 
+function makeDemoConditionsFor24h(beach: Beach): BeachConditionDto[] {
+  const now = Date.now();
+  const weather = ['맑음', '구름 조금', '흐림'];
+  let base = 0.35 + Math.random() * 0.25; // 0.35~0.6
+
+  const arr = Array.from({ length: 24 }, (_, i) => {
+    base += (Math.random() - 0.5) * 0.1;
+    base = Math.max(0.1, Math.min(1.1, base)); // 0.1~1.1m
+    const t = new Date(now - (23 - i) * 3600_000).toISOString();
+    return {
+      observedAt: t,
+      waveHeightMeters: +base.toFixed(2),
+      waterTemperatureCelsius: +(18 + Math.random() * 6).toFixed(1),
+      latitude: beach.latitude,
+      longitude: beach.longitude,
+      weatherSummary: weather[Math.floor(Math.random() * weather.length)],
+    } as unknown as BeachConditionDto;
+  });
+
+  return arr;
+}
+
+
+
 type ConditionStatus = 'free' | 'normal' | 'busy';
 type ExtendedConditionStatus = ConditionStatus | 'unknown';
 
@@ -177,12 +201,17 @@ export function BeachDetailView({
     };
   }, [beachTelemetryId]);
 
-  const sortedConditions = useMemo(
-    () => [...conditions].sort(
+  const sortedConditions = useMemo(() => {
+    const source =
+      conditions.length > 0
+        ? conditions
+        : makeDemoConditionsFor24h(beach); // ← 빈 경우 더미 24h
+
+    return [...source].sort(
       (a, b) => new Date(b.observedAt).getTime() - new Date(a.observedAt).getTime(),
-    ),
-    [conditions],
-  );
+    );
+  }, [conditions, beach]);
+
 
   const latestCondition = sortedConditions[0] ?? null;
 
