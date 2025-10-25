@@ -1,7 +1,51 @@
+# .gradle/
+# build/
+# gradle/wrapper/gradle-wrapper.jar
+# out/
+# **/.DS_Store
+# .idea/
+# *.iml
+# ---------- Frontend (Next.js/React) ----------
+front/node_modules/
+front/.next/
+front/out/
+front/.turbo/
+front/.vercel/
+front/.cache/
+front/coverage/
+front/.eslintcache
+front/.vite/
+front/dist/
+front/storybook-static/
+front/cypress/videos/
+front/cypress/screenshots/
+front/npm-debug.log*
+front/yarn-error.log*
+front/pnpm-debug.log*
+
+# (잠금파일은 하나만 사용) 예: pnpm만 쓰면 아래 둘은 주석 해제해서 무시
+# front/package-lock.json
+# front/yarn.lock
+
+# ---------- Backend (Spring/Gradle) ----------
 .gradle/
 build/
-gradle/wrapper/gradle-wrapper.jar
-out/
+target/
+**/*.log
+
+# Gradle wrapper는 반드시 버전에 포함 (무시 금지)
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+!gradlew
+!gradlew.bat
+
+# ---------- Env & Secrets ----------
+.env
+.env.*
+!.env.example   # 예시 파일만 허용
+
+# ---------- IDE / OS ----------
 **/.DS_Store
 .idea/
+.vscode/
 *.iml
