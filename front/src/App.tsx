@@ -186,9 +186,9 @@ export default function App() {
   }, []);
 
   const hashtags = [
-    { id: 'busy', label: '#혼잡한 곳' },
-    { id: 'normal', label: '#보통인 곳' },
-    { id: 'free', label: '#여유로운 곳' },
+    { id: 'busy', label: '#요즘뜨는해수욕장' },
+    { id: 'normal', label: '#가장많이가는곳' },
+    { id: 'free', label: '#축제하는곳' },
   ];
 
   const toggleFavorite = (beachId: string, e: React.MouseEvent) => {
