@@ -64,6 +64,20 @@ export default function App() {
   const [favoriteBeaches, setFavoriteBeaches] = useState<string[]>([]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
+
+  const handleSearchSubmit = () => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return;
+    const match = beaches.find(
+      (b) => b.name.toLowerCase().includes(q) || b.code.toLowerCase().includes(q)
+    );
+    if (match) {
+      setSelectedBeach(match);
+      setLastSelectedBeach(match);
+      setActiveTab('home'); // 상세 탭으로 전환 → 지도도 그 위치로 이동
+    }
+  };
+
   // Load favorites from localStorage on mount
   useEffect(() => {
     const savedFavorites = localStorage.getItem('beachcheck_favorites');
@@ -420,9 +434,17 @@ export default function App() {
             placeholder="해수욕장 이름을 검색하세요"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleSearchSubmit(); }}
             className="flex-1 outline-none bg-transparent font-['Noto_Sans_KR:Regular',_sans-serif] text-[13px] text-foreground placeholder:text-muted-foreground"
           />
-          <Search className="w-[18px] h-[18px] text-[#007DFC]" />
+          <button
+            type="button"
+            onClick={handleSearchSubmit}   // ⬅️ 아이콘 클릭으로 검색
+            aria-label="검색"
+            className="shrink-0"
+          >
+            <Search className="w-[18px] h-[18px] text-[#007DFC]" />
+          </button>
         </div>
 
         {/* Hashtags */}
