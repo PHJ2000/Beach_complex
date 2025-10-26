@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+// front/src/App.tsx
+import { useState, useEffect, useMemo } from 'react';
 import { Search, Heart } from 'lucide-react';
 import svgPaths from "./imports/svg-aou00tt65r";
 import { BeachCard } from './components/BeachCard';
-import { HashtagChip } from './components/HashtagChip';
+// import { HashtagChip } from './components/HashtagChip'; // ⬅️ 사용 안 함
 import { BeachDetailView } from './components/BeachDetailView';
 import { EventsView } from './components/EventsView';
 import { MyPageView } from './components/MyPageView';
@@ -13,21 +14,31 @@ import { Beach } from './types/beach';
 import { Calendar } from './components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from './components/ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './components/ui/dialog';
+import { computeTrendingScore } from './constants/trending';
+import HashtagBar, { FilterKey } from './components/HashtagBar';
+
+// 해시태그 동작을 위한 임시 기준들
+const POPULAR_RANK: Record<string, number> = {
+  HAEUNDAE: 100,
+  GWANGALLI: 93,
+  SONGJEONG: 85,
+};
+const FESTIVAL_SET = new Set<string>(['HAEUNDAE']); // 행사 있는 곳만 표시
 
 function WaveLogo() {
   return (
     <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
       <circle cx="20" cy="20" r="20" fill="#007DFC" />
-      <path 
-        d="M10 22C12 20 14 20 16 22C18 24 20 24 22 22C24 20 26 20 28 22C29 23 30 23 31 22" 
-        stroke="white" 
-        strokeWidth="2.5" 
+      <path
+        d="M10 22C12 20 14 20 16 22C18 24 20 24 22 22C24 20 26 20 28 22C29 23 30 23 31 22"
+        stroke="white"
+        strokeWidth="2.5"
         strokeLinecap="round"
       />
-      <path 
-        d="M10 27C12 25 14 25 16 27C18 29 20 29 22 27C24 25 26 25 28 27C29 28 30 28 31 27" 
-        stroke="white" 
-        strokeWidth="2.5" 
+      <path
+        d="M10 27C12 25 14 25 16 27C18 29 20 29 22 27C24 25 26 25 28 27C29 28 30 28 31 27"
+        stroke="white"
+        strokeWidth="2.5"
         strokeLinecap="round"
       />
     </svg>
@@ -37,11 +48,11 @@ function WaveLogo() {
 function CloudWeatherIcon() {
   return (
     <svg width="32" height="32" viewBox="0 0 50 50" fill="none">
-      <path 
-        d={svgPaths.p2a8354c0} 
-        stroke="#007DFC" 
-        strokeLinecap="round" 
-        strokeLinejoin="round" 
+      <path
+        d={svgPaths.p2a8354c0}
+        stroke="#007DFC"
+        strokeLinecap="round"
+        strokeLinejoin="round"
         strokeWidth="2"
       />
     </svg>
@@ -51,7 +62,6 @@ function CloudWeatherIcon() {
 export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [activeTag, setActiveTag] = useState<string | null>(null);
   const [showWeather, setShowWeather] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [beaches, setBeaches] = useState<Beach[]>([]);
@@ -64,6 +74,8 @@ export default function App() {
   const [favoriteBeaches, setFavoriteBeaches] = useState<string[]>([]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
+  // ✅ 새 해시태그 상태
+  const [filter, setFilter] = useState<FilterKey>(null);
 
   const handleSearchSubmit = () => {
     const q = searchQuery.trim().toLowerCase();
@@ -140,7 +152,7 @@ export default function App() {
         const storedTheme = localStorage.getItem('beachcheck_theme') || 'light';
         const root = document.documentElement;
         const body = document.body;
-        
+
         if (storedTheme === 'dark') {
           root.classList.add('dark');
           body.classList.add('dark');
@@ -185,11 +197,35 @@ export default function App() {
     };
   }, []);
 
-  const hashtags = [
-    { id: 'busy', label: '#요즘뜨는해수욕장' },
-    { id: 'normal', label: '#가장많이가는곳' },
-    { id: 'free', label: '#축제하는곳' },
-  ];
+  // ✅ 검색 + 찜 + 해시태그(트렌딩/인기/축제) 반영한 목록
+  const filteredBeaches = useMemo(() => {
+    let arr = beaches;
+
+    // 1) 찜 필터
+    if (showFavoritesOnly) {
+      arr = arr.filter(b => favoriteBeaches.includes(b.id));
+    }
+
+    // 2) 검색 필터
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      arr = arr.filter(b =>
+        b.name.toLowerCase().includes(q) ||
+        b.code.toLowerCase().includes(q)
+      );
+    }
+
+    // 3) 해시태그 동작 (status와 무관)
+    if (filter === 'trending') {
+      arr = [...arr].sort((a, b) => computeTrendingScore(b) - computeTrendingScore(a));
+    } else if (filter === 'popular') {
+      arr = [...arr].sort((a, b) => (POPULAR_RANK[b.code] ?? 0) - (POPULAR_RANK[a.code] ?? 0));
+    } else if (filter === 'festival') {
+      arr = arr.filter(b => FESTIVAL_SET.has(b.code));
+    }
+
+    return arr;
+  }, [beaches, favoriteBeaches, showFavoritesOnly, searchQuery, filter]);
 
   const toggleFavorite = (beachId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -201,16 +237,6 @@ export default function App() {
       }
     });
   };
-
-  const filteredBeaches = beaches.filter((beach) => {
-    const query = searchQuery.trim().toLowerCase();
-    const nameMatches = beach.name.toLowerCase().includes(query);
-    const codeMatches = beach.code.toLowerCase().includes(query);
-    const matchesSearch = query.length === 0 || nameMatches || codeMatches;
-    const matchesTag = !activeTag || beach.status === activeTag;
-    const matchesFavorite = !showFavoritesOnly || favoriteBeaches.includes(beach.id);
-    return matchesSearch && matchesTag && matchesFavorite;
-  });
 
   const formatDate = (date: Date | undefined) => {
     if (!date) return '날짜';
@@ -252,7 +278,7 @@ export default function App() {
   // Show events view
   if (currentView === 'events') {
     return (
-      <EventsView 
+      <EventsView
         onNavigate={(view) => {
           if (view === 'main') {
             setCurrentView('main');
@@ -270,7 +296,7 @@ export default function App() {
   // Show my page view
   if (currentView === 'mypage') {
     return (
-      <MyPageView 
+      <MyPageView
         onNavigate={(view) => {
           if (view === 'main') {
             setCurrentView('main');
@@ -291,7 +317,7 @@ export default function App() {
   // Show developer mode view
   if (currentView === 'developer') {
     return (
-      <DeveloperModeView 
+      <DeveloperModeView
         onNavigate={(view) => {
           if (view === 'main') {
             setCurrentView('main');
@@ -358,16 +384,16 @@ export default function App() {
             <div className="shrink-0">
               <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
                 <circle cx="20" cy="20" r="20" fill="#007DFC" />
-                <path 
-                  d="M10 22C12 20 14 20 16 22C18 24 20 24 22 22C24 20 26 20 28 22C29 23 30 23 31 22" 
-                  stroke="white" 
-                  strokeWidth="2.5" 
+                <path
+                  d="M10 22C12 20 14 20 16 22C18 24 20 24 22 22C24 20 26 20 28 22C29 23 30 23 31 22"
+                  stroke="white"
+                  strokeWidth="2.5"
                   strokeLinecap="round"
                 />
-                <path 
-                  d="M10 27C12 25 14 25 16 27C18 29 20 29 22 27C24 25 26 25 28 27C29 28 30 28 31 27" 
-                  stroke="white" 
-                  strokeWidth="2.5" 
+                <path
+                  d="M10 27C12 25 14 25 16 27C18 29 20 29 22 27C24 25 26 25 28 27C29 28 30 28 31 27"
+                  stroke="white"
+                  strokeWidth="2.5"
                   strokeLinecap="round"
                 />
               </svg>
@@ -379,7 +405,7 @@ export default function App() {
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-1.5 shrink-0">
             <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
               <PopoverTrigger asChild>
@@ -405,18 +431,18 @@ export default function App() {
                 />
               </PopoverContent>
             </Popover>
-            
-            <button 
+
+            <button
               onClick={() => setShowWeather(true)}
               className="flex items-center justify-center gap-1.5 w-[85px] h-[38px] px-2 bg-card rounded-lg shadow-sm hover:shadow-md transition-shadow border border-border"
               title="날씨 보기"
             >
               <svg width="20" height="20" viewBox="0 0 50 50" fill="none" className="shrink-0">
-                <path 
-                  d={svgPaths.p2a8354c0} 
-                  stroke="#007DFC" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
+                <path
+                  d={svgPaths.p2a8354c0}
+                  stroke="#007DFC"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                   strokeWidth="2"
                 />
               </svg>
@@ -439,7 +465,7 @@ export default function App() {
           />
           <button
             type="button"
-            onClick={handleSearchSubmit}   // ⬅️ 아이콘 클릭으로 검색
+            onClick={handleSearchSubmit}
             aria-label="검색"
             className="shrink-0"
           >
@@ -454,7 +480,7 @@ export default function App() {
             onClick={() => {
               setShowFavoritesOnly(!showFavoritesOnly);
               if (!showFavoritesOnly) {
-                setActiveTag(null); // Clear other filters when showing favorites
+                setFilter(null); // 찜 보기 켤 때 다른 태그 해제
               }
             }}
             className={`shrink-0 flex items-center justify-center w-[36px] h-[36px] rounded-full transition-all border-2 ${
@@ -464,28 +490,17 @@ export default function App() {
             }`}
             aria-label="찜한 해수욕장"
           >
-            <Heart 
+            <Heart
               className={`w-4 h-4 ${
-                showFavoritesOnly 
-                  ? 'fill-white stroke-white' 
+                showFavoritesOnly
+                  ? 'fill-white stroke-white'
                   : 'fill-purple-600 stroke-purple-600'
               }`}
             />
           </button>
-          
-          {hashtags.map((tag) => (
-            <HashtagChip
-              key={tag.id}
-              label={tag.label}
-              isActive={activeTag === tag.id}
-              onClick={() => {
-                setActiveTag(activeTag === tag.id ? null : tag.id);
-                if (activeTag !== tag.id) {
-                  setShowFavoritesOnly(false); // Clear favorites filter when selecting hashtag
-                }
-              }}
-            />
-          ))}
+
+          {/* 새 해시태그 바 */}
+          <HashtagBar value={filter} onChange={setFilter} />
         </div>
       </div>
 
