@@ -283,12 +283,13 @@ export function BeachDetailView({
     [hourlyConditions],
   );
 
-  const derivedStatus: ExtendedConditionStatus = latestCondition
-    ? classifyWaveHeight(latestCondition.waveHeightMeters)
-    : 'unknown';
+  // const derivedStatus: ExtendedConditionStatus = latestCondition
+  //   ? classifyWaveHeight(latestCondition.waveHeightMeters)
+  //   : 'unknown';
 
-  const displayStatus: ExtendedConditionStatus =
-    derivedStatus === 'unknown' ? beach.status : derivedStatus;
+  // const displayStatus: ExtendedConditionStatus =
+  //   derivedStatus === 'unknown' ? beach.status : derivedStatus;
+  const displayStatus: ExtendedConditionStatus = beach.status;
 
   const statusTextColor =
     displayStatus === 'busy'

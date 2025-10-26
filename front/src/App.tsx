@@ -14,16 +14,22 @@ import { Beach } from './types/beach';
 import { Calendar } from './components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from './components/ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './components/ui/dialog';
-import { computeTrendingScore } from './constants/trending';
+// import { computeTrendingScore } from './constants/trending'; // ⬅️ 큐레이션으로 대체하여 사용 안 함
 import HashtagBar, { FilterKey } from './components/HashtagBar';
 
-// 해시태그 동작을 위한 임시 기준들
-const POPULAR_RANK: Record<string, number> = {
-  HAEUNDAE: 100,
-  GWANGALLI: 93,
-  SONGJEONG: 85,
-};
-const FESTIVAL_SET = new Set<string>(['HAEUNDAE']); // 행사 있는 곳만 표시
+/** =======================
+ *  큐레이션 상수 (요청 사양)
+ *  ======================= */
+// #요즘뜨는해수욕장 → 광안리, 송도, 다대포 (이 순서 유지)
+const TRENDING_ORDER = ['GWANGALLI', 'SONGDO', 'DADAEPO'] as const;
+const TRENDING_SET = new Set(TRENDING_ORDER);
+
+// #가장많이가는곳 → 해운대, 광안리 (이 순서 유지)
+const POPULAR_ORDER = ['HAEUNDAE', 'GWANGALLI'] as const;
+const POPULAR_SET = new Set(POPULAR_ORDER);
+
+// #축제하는곳 (필요 시 코드 추가)
+const FESTIVAL_SET = new Set<string>(['HAEUNDAE']);
 
 function WaveLogo() {
   return (
@@ -197,7 +203,9 @@ export default function App() {
     };
   }, []);
 
-  // ✅ 검색 + 찜 + 해시태그(트렌딩/인기/축제) 반영한 목록
+  /** ===========================
+   *  검색 + 찜 + 해시태그 큐레이션
+   *  =========================== */
   const filteredBeaches = useMemo(() => {
     let arr = beaches;
 
@@ -215,12 +223,27 @@ export default function App() {
       );
     }
 
-    // 3) 해시태그 동작 (status와 무관)
+    // 3) 해시태그 동작 (status와 무관하게, 지정 큐레이션만 노출)
     if (filter === 'trending') {
-      arr = [...arr].sort((a, b) => computeTrendingScore(b) - computeTrendingScore(a));
+      // #요즘뜨는해수욕장: 광안리 → 송도 → 다대포 (순서 고정)
+      arr = arr
+        .filter(b => TRENDING_SET.has(b.code))
+        .sort(
+          (a, b) =>
+            TRENDING_ORDER.indexOf(a.code as any) -
+            TRENDING_ORDER.indexOf(b.code as any)
+        );
     } else if (filter === 'popular') {
-      arr = [...arr].sort((a, b) => (POPULAR_RANK[b.code] ?? 0) - (POPULAR_RANK[a.code] ?? 0));
+      // #가장많이가는곳: 해운대 → 광안리 (순서 고정)
+      arr = arr
+        .filter(b => POPULAR_SET.has(b.code))
+        .sort(
+          (a, b) =>
+            POPULAR_ORDER.indexOf(a.code as any) -
+            POPULAR_ORDER.indexOf(b.code as any)
+        );
     } else if (filter === 'festival') {
+      // #축제하는곳: 세트에 포함된 코드만
       arr = arr.filter(b => FESTIVAL_SET.has(b.code));
     }
 
@@ -515,7 +538,7 @@ export default function App() {
 
       {!isLoadingBeaches && beachError && (
         <div className="p-4 mx-4 my-4 text-center bg-red-100 text-red-600 rounded-lg border border-red-200">
-          <p className="font-['Noto_Sans_KR:Regular',_sans-serif] text-[13px]">
+          <p className="font-['Noto_SANS_KR:Regular',_sans-serif] text-[13px]">
             {beachError}
           </p>
         </div>
