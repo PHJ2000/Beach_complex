@@ -37,6 +37,8 @@ const HARDCODE_DISTANCE_M: Record<string, number> = {
   HAEUNDAE: 2300,   // 2.3 km
   GWANGALLI: 5400,  // 5.4 km
   SONGJEONG: 8400,  // 8.4 km
+  DADAEPO:   15000,
+  SONGDO:    7000,
 };
 
 
@@ -50,6 +52,8 @@ const HARDCODE_UPDATED_AT_BY_CODE: Record<string, string> = {
   HAEUNDAE:  '2025-10-25T15:56:34.971Z',
   GWANGALLI: '2025-10-25T15:56:34.971Z',
   SONGJEONG: '2025-10-25T15:56:34.971Z',
+  DADAEPO:   '2025-10-25T15:56:34.971Z',
+  SONGDO:    '2025-10-25T15:56:34.971Z',
 };
 /* ------------------------------------------------------------------- */
 
@@ -58,6 +62,8 @@ const ADDRESS_FALLBACK: Record<string, string> = {
   HAEUNDAE:  '부산광역시 해운대구 해운대해변로 264',
   GWANGALLI: '부산광역시 수영구 광안해변로 219',
   SONGJEONG: '부산광역시 해운대구 송정해변로 62',
+  DADAEPO:   '부산광역시 사하구 몰운대1길 14',
+  SONGDO:    '부산광역시 서구 송도해변로 100',
 };
 /* ------------------------------------------------------------------- */
 
