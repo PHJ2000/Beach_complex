@@ -523,7 +523,7 @@ export function BeachDetailView({
                   </p>
                   {observedAtDisplay && (
                     <p className="font-['Noto_Sans_KR:Medium',_sans-serif] text-[11px] text-muted-foreground mt-1">
-                      최근 관측 {observedAtDisplay} · 파고 {waveHeightDisplay}
+                      최근 예측 {observedAtDisplay} · 혼잡도 {waveHeightDisplay}
                     </p>
                   )}
                 </div>
@@ -643,7 +643,7 @@ export function BeachDetailView({
 
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-['Noto_Sans_KR:Bold',_sans-serif] text-foreground">최근 24시간 파고 추이</h3>
+              <h3 className="font-['Noto_Sans_KR:Bold',_sans-serif] text-foreground">최근 24시간 혼잡도 추이</h3>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
                 <span className="font-['Noto_Sans_KR:Medium',_sans-serif] text-[11px] text-muted-foreground">
@@ -734,7 +734,7 @@ export function BeachDetailView({
                   </div>
 
                   <div className="flex items-center justify-center mt-3 pt-3 border-t border-border">
-                    <span className="font-['Noto_Sans_KR:Medium',_sans-serif] text-[11px] text-muted-foreground">시간대별 파고 (0시 ~ 23시)</span>
+                    <span className="font-['Noto_Sans_KR:Medium',_sans-serif] text-[11px] text-muted-foreground">시간대별 혼잡도 예측 (0시 ~ 23시)</span>
                   </div>
                 </>
               ) : (
@@ -802,7 +802,7 @@ export function BeachDetailView({
                     <p className="font-['Noto_Sans_KR:Bold',_sans-serif] text-[14px] text-foreground">{formatWaterTemperature(latestWaterTemperature)}</p>
                   </div>
                   <div>
-                    <p className="font-['Noto_Sans_KR:Medium',_sans-serif] text-[11px] text-gray-600 mb-1">파고</p>
+                    <p className="font-['Noto_Sans_KR:Medium',_sans-serif] text-[11px] text-gray-600 mb-1">혼잡도</p>
                     <p className="font-['Noto_Sans_KR:Bold',_sans-serif] text-[14px] text-foreground">{waveHeightDisplay}</p>
                   </div>
                   <div>
