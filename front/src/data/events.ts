@@ -1,6 +1,7 @@
 // NOTE: This module provides mock data used solely for demo/preview experiences within the
 // EventsView. Replace with real API integration when backend endpoints become available.
 
+
 export interface Event {
   id: string;
   title: string;
@@ -64,7 +65,7 @@ export const events: Event[] = [
     date: new Date(2025, 9, 5), // Oct 5, 2025
     endDate: new Date(2025, 9, 6), // Oct 6, 2025
     color: '#FFD93D',
-    imageUrl: '',
+    imageUrl: 'https://www.yangsanilbo.com/news/photo/202205/86357_54679_3342.jpg',
     description: '해운대 해수욕장에서 펼쳐지는 모래 조각 전시',
   },
   {
@@ -76,7 +77,7 @@ export const events: Event[] = [
     congestionStatus: 'free',
     date: new Date(2025, 9, 6), // Oct 6, 2025
     color: '#6BCB77',
-    imageUrl: '',
+    imageUrl: 'https://dry7pvlp22cox.cloudfront.net/mrt-images-prod/2024/11/27/mxTb/jSwm7H18Pf.jpg',
     description: '광안대교 아래를 지나는 프리미엄 요트 투어',
   },
   {
@@ -88,7 +89,7 @@ export const events: Event[] = [
     congestionStatus: 'normal',
     date: new Date(2025, 9, 12), // Oct 12, 2025
     color: '#A78BFA',
-    imageUrl: '',
+    imageUrl: 'http://tong.visitkorea.or.kr/cms/resource/11/3413711_image2_1.jpg',
     description: '바다 위를 가로지르는 스카이워크 케이블카',
   },
 ];
