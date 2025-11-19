@@ -24,28 +24,6 @@ public class BeachController {
         this.beachService = beachService;
     }
 
-    @GetMapping
-    public ResponseEntity<List<BeachDto>> findAll(
-            @RequestParam(required = false) String q,
-            @RequestParam(required = false) String tag
-    ) {
-        boolean hasQ = (q != null && !q.isBlank());
-        boolean hasTag = (tag != null && !tag.isBlank());
-
-        if (!hasQ && !hasTag) {
-            // ✅ 캐시 타는 기본 목록
-            return ResponseEntity.ok(beachService.findAll());
-        }
-        // ✅ 검색/필터
-        return ResponseEntity.ok(beachService.search(q, tag));
-    }
-
-    @GetMapping("/{code}")
-    public ResponseEntity<BeachDto> findByCode(@PathVariable @NotBlank String code) {
-        return ResponseEntity.ok(beachService.findByCode(code));
-    }
-
-
     /**
      * 해변 검색
      *
@@ -76,6 +54,11 @@ public class BeachController {
 
         // 기본: 전체 목록 (캐시됨)
         return ResponseEntity.ok(beachService.findAll());
+    }
+
+    @GetMapping("/{code}")
+    public ResponseEntity<BeachDto> findByCode(@PathVariable @NotBlank String code) {
+        return ResponseEntity.ok(beachService.findByCode(code));
     }
 
     // TODO: Add POST endpoint once upstream event ingestion is designed.
