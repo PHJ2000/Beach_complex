@@ -49,6 +49,7 @@ public class BeachService {
         return BeachDto.from(beach);
     }
 
+    // 대소문자 구분없이 검색
     public List<BeachDto> search(String q, String tag) {
         String qq = (q == null || q.isBlank()) ? null : q.trim();
         String tt = (tag == null || tag.isBlank()) ? null : tag.trim();
@@ -57,6 +58,7 @@ public class BeachService {
         if (qq == null) {
             rows = beachRepository.findAll();
         } else {
+            // 태그 검사는 stream단계에서 뒤늦게
             rows = beachRepository.findByNameContainingIgnoreCaseOrCodeContainingIgnoreCase(qq, qq);
         }
 
@@ -67,6 +69,24 @@ public class BeachService {
         }
 
         return rows.stream().map(BeachDto::from).toList();
+    }
+
+    /**
+     * 특정 위치로부터 반경 내 해변 검색
+     *
+     * @param longitude 경도
+     * @param latitude 위도
+     * @param radiusKm 반경 (킬로미터)
+     * @return 거리순 해변 목록
+     */
+    public List<BeachDto> findNearby(double longitude, double latitude, double radiusKm) {
+        // km를 미터로 변환
+        double radiusMeters = radiusKm * 1000;
+
+        return beachRepository.findBeachesWithinRadius(longitude, latitude, radiusMeters)
+                .stream()
+                .map(BeachDto::from)
+                .toList();
     }
 
 

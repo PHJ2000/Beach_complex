@@ -45,5 +45,38 @@ public class BeachController {
         return ResponseEntity.ok(beachService.findByCode(code));
     }
 
+
+    /**
+     * 해변 검색
+     *
+     * @param q 검색어 (이름/코드)
+     * @param tag 태그 필터
+     * @param lat 사용자 위도 (선택)
+     * @param lon 사용자 경도 (선택)
+     * @param radiusKm 반경 km (lat/lon과 함께 사용)
+     * @return 해변 목록
+     */
+    @GetMapping
+    public ResponseEntity<List<BeachDto>> findAll(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String tag,
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lon,
+            @RequestParam(required = false) Double radiusKm
+    ) {
+        // 반경 검색 요청인 경우
+        if (lat != null && lon != null && radiusKm != null) {
+            return ResponseEntity.ok(beachService.findNearby(lon, lat, radiusKm));
+        }
+
+        // 기존 검색 또는 필터링
+        if (q != null || tag != null) {
+            return ResponseEntity.ok(beachService.search(q, tag));
+        }
+
+        // 기본: 전체 목록 (캐시됨)
+        return ResponseEntity.ok(beachService.findAll());
+    }
+
     // TODO: Add POST endpoint once upstream event ingestion is designed.
 }
