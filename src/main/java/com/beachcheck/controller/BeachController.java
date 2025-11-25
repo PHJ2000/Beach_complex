@@ -1,7 +1,9 @@
 package com.beachcheck.controller;
 
 import com.beachcheck.dto.beach.BeachDto;
+import com.beachcheck.dto.beach.request.BeachSearchRequestDto;
 import com.beachcheck.service.BeachService;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -27,29 +29,23 @@ public class BeachController {
     /**
      * 해변 검색
      *
-     * @param q 검색어 (이름/코드)
-     * @param tag 태그 필터
-     * @param lat 사용자 위도 (선택)
-     * @param lon 사용자 경도 (선택)
-     * @param radiusKm 반경 km (lat/lon과 함께 사용)
      * @return 해변 목록
      */
     @GetMapping
-    public ResponseEntity<List<BeachDto>> findAll(
-            @RequestParam(required = false) String q,
-            @RequestParam(required = false) String tag,
-            @RequestParam(required = false) Double lat,
-            @RequestParam(required = false) Double lon,
-            @RequestParam(required = false) Double radiusKm
-    ) {
+    public ResponseEntity<List<BeachDto>> findAll(@Valid BeachSearchRequestDto request) {
+        // DTO 레벨 검증
+        request.validateRadiusParams();
+
         // 반경 검색 요청인 경우
-        if (lat != null && lon != null && radiusKm != null) {
-            return ResponseEntity.ok(beachService.findNearby(lon, lat, radiusKm));
+        if (request.hasCompleteRadiusParams()) {
+            return ResponseEntity.ok(
+                    beachService.findNearby(request.lon(), request.lat(), request.radiusKm())
+            );
         }
 
         // 기존 검색 또는 필터링
-        if (q != null || tag != null) {
-            return ResponseEntity.ok(beachService.search(q, tag));
+        if (request.q() != null || request.tag() != null) {
+            return ResponseEntity.ok(beachService.search(request.q(), request.tag()));
         }
 
         // 기본: 전체 목록 (캐시됨)
